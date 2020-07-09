@@ -67,7 +67,7 @@ def removeNonlinear(wp):
     wp_plot = []
     slopes = []
     for i in range(0, len(wp), slen):
-        if i+slen > l+1: break
+        if i+slen > l+1: break   # TODO: if i+0.5*slen > l  # last piece at least half of slen segment (end in x[start:end] can be > len(x))
         slope, intercept, r_value = stats.linregress(wp[i:i+slen])[:3]
         slopes.append(slope)
         if 1.04 > round(slope, 2) > 0.96:
@@ -156,7 +156,7 @@ def plotFigure2(ws, l1, l2, file1, file2):
         for d in ws[1:]: 
             dtw = np.concatenate((dtw, d), axis=0)
     dtw = dtw.tolist()
-    j = { 'dtw': dtw, 'lengths': [l1, l2] }
+    j = { 'dtw': dtw, 'filenames': [fname1, fname2], 'lengths': [l1/SR, l2/SR] }
     json.dump(j, open(jsonname, 'w', encoding='utf-8'), sort_keys=True)
 
     

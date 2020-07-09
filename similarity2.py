@@ -15,7 +15,8 @@ from multiprocessing import shared_memory
 from subprocess import Popen, DEVNULL, PIPE
 import numpy as np
 from test_subdtw_NEW_tuning import dtwstart
-import pickle
+from uuid import uuid4
+#import pickle
 
 JSONFILE = 'test.json'
 SR = 22050
