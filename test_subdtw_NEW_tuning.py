@@ -70,7 +70,7 @@ def removeNonlinear(wp):
         if i+slen > l+1: break
         slope, intercept, r_value = stats.linregress(wp[i:i+slen])[:3]
         slopes.append(slope)
-        if r**2 > 0.95 and 1.05 > round(slope, 2) > 0.95:
+        if 1.05 > round(slope, 2) > 0.95:
             #wp_out = np.vstack([wp_out, wp[i:i+slen]])
             wp_plot.append(wp[i:i+slen])
     if len(wp_plot) == 1: wp_plot = []
