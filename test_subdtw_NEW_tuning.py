@@ -26,15 +26,13 @@ DST = DIR + '2020/results/'
 
 
 
-#FILE1 = sys.argv[1]
-#FILE2 = sys.argv[2]
+FILE1 = sys.argv[1]
+FILE2 = sys.argv[2]
 #FILE1 = '/Volumes/Beratight2/SDTW/82-10-10/gd1982-10-10.nak700.anon-poris.LMPP.95682.flac16/gd82-10-10d3t06.flac'
 #FILE2 = '/Volumes/Beratight2/SDTW/82-10-10/gd1982-10-10.nak700.wagner.miller.109822.flac16/gd82-10-10d3t06.flac'
 
 #FILE1 = '/Volumes/Beratight2/SDTW/test/gd1971-08-06d2t04_part.flac'
 #FILE2 = '/Volumes/Beratight2/SDTW/test/gd1971-08-06d2t04_part.flac'
-#FILE1 = None
-#FILE2 = None
 
 
 class gl():
@@ -70,7 +68,7 @@ def removeNonlinear(wp):
         if i+slen > l+1: break
         slope, intercept, r_value = stats.linregress(wp[i:i+slen])[:3]
         slopes.append(slope)
-        if r**2 > 0.9 and 1.05 > round(slope, 2) > 0.95:
+        if r_value**2 > 0.9 and 1.05 > round(slope, 2) > 0.95:
             #wp_out = np.vstack([wp_out, wp[i:i+slen]])
             wp_plot.append(wp[i:i+slen])
     if len(wp_plot) == 1: wp_plot = []
@@ -115,7 +113,7 @@ def readAudio(wav, tuning=float(0)):
 
 def resampleAudio(a, t):
     ratio = 2**(t / 1200)
-    #print(t, ratio)
+    print(t, ratio)
     a = samplerate.resample(a, ratio, 'sinc_best')
     return a
 
@@ -150,7 +148,7 @@ def plotFigure2(ws, l1, l2, file1, file2):
     fname2 = '/'.join(fsplit2[-2:])
     pdfname = os.path.join(gl.dstdir, '{0}_{1}.pdf'.format(fsplit1[-1], fsplit2[-1]))
     #pdfname = os.path.join(gl.dstdir, 'test.pdf')
-    #print(pdfname)
+    print(pdfname)
     #fname1 = '/'.join(file1.split('/')[-2:])
     #fname2 = '/'.join(file2.split('/')[-2:])
     p = plt.figure()
@@ -175,12 +173,11 @@ def makeFolders(f1, f2):
     gl.dstdir = os.path.join(DST, '{0}_{1}'.format(fid[0], fid[1]))
     for d in [TEMP, DST, gl.dstdir]:
         if not os.path.exists(d):
-            try: os.makedirs(d)
-            except: pass
+            os.makedirs(d)
 
 
-def dtwstart(FILE1, FILE2):
-    resfiles = None
+def main():
+
     makeFolders(FILE1, FILE2)
     #return
 
@@ -200,7 +197,6 @@ def dtwstart(FILE1, FILE2):
 
     if len(wp_plot) > 0:
         plotFigure2(wp_plot, len1, len2, FILE1, FILE2)
-        resfiles = (FILE1, FILE2)
         dtw = wp_plot[0]
         if len(wp_plot) > 1:
             for d in wp_plot[1:]: 
@@ -214,6 +210,6 @@ def dtwstart(FILE1, FILE2):
     #spamwriter = csv.writer(sys.stdout)
     #for i in dtw:
     #    spamwriter.writerow(i)
-    return resfiles
-#main()
+
+main()
 

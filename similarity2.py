@@ -2,24 +2,23 @@
 
 # 1. find longest performance
 # 2. try alignemnet of all others with performance from 1.
-# 3. store files with no alignment
+# 3. store files with no alignment (TODO)
 # 4. repeat from 1. with unaligned files and reference next longest recording (TODO)
 
 # needs 64GB memory
 
-
 import essentia.standard as estd
 from essentia.pytools.spectral import hpcpgram
-import itertools, os, json
+import itertools, os, json, progressbar
 import multiprocessing as mp
-from subprocess import Popen, DEVNULL, PIPE
-from test_subdtw_NEW_tuning import dtwstart
-import numpy as np
 from multiprocessing import shared_memory
-
+from subprocess import Popen, DEVNULL, PIPE
+import numpy as np
+from test_subdtw_NEW_tuning import dtwstart
+import pickle
 
 #THREADS = 12
-SCRIPT = '../../test_subdtw-NEW_tuning.command.py'
+SCRIPT = 'test_subdtw-NEW_tuning.py'
 #SCRIPT = '../../test_subdtw-NEW_tuning_segments.command.py'
 JSONFILE = 'test.json'
 SR = 22050
@@ -28,7 +27,7 @@ RECSDIR = '/Volumes/Beratight2/SDTW/82-10-10'
 
 CPUS = 24
 THREADS_SIMILARITY = 24
-THREADS_DTW = 6
+THREADS_DTW = 7
 
 
 class gl():
@@ -50,27 +49,25 @@ def loadRecordings():
         recordings.append(p)
     recordings = sorted(recordings, key=lambda x: combinedLength(x))
     # shared memory for each audio file
-
-    print('calculating hpcgrams')
     for i, rec in enumerate(recordings):
         etree_number = etreeNumber(rec[0][0])
         for j, f in enumerate(rec):
             #print(i, f[0])
-            #gl.shms.append(shared_memory.SharedMemory(create=True, size=f[1].nbytes, name='{0}_{1}'.format(etree_number, j)))
-            #s = np.ndarray(f[1].shape, dtype=np.float32, buffer=gl.shms[-1].buf)
-            #s[:] = f[1][:]
+            gl.shms.append(shared_memory.SharedMemory(create=True, size=f[1].nbytes, name='{0}_{1}'.format(etree_number, j)))
+            s = np.ndarray(f[1].shape, dtype=np.float32, buffer=gl.shms[-1].buf)
+            s[:] = f[1][:]
 
-            hpc = hpcpgram(f[1], sampleRate=SR)
-            gl.shms.append(shared_memory.SharedMemory(create=True, size=hpc.nbytes, name='{0}_{1}'.format(etree_number, j)))
-            s = np.ndarray(hpc.shape, dtype=np.float32, buffer=gl.shms[-1].buf)
-            s[:] = hpc[:]
+            #hpc = hpcpgram(f[1], sampleRate=SR)
+            #gl.shms.append(shared_memory.SharedMemory(create=True, size=hpc.nbytes, name='{0}_{1}'.format(etree_number, j)))
+            #s = np.ndarray(hpc.shape, dtype=np.float32, buffer=gl.shms[-1].buf)
+            #s[:] = hpc[:]
 
             recordings[i][j] = ('/'.join(f[0].split('/')[-2:]), j, f[1].shape) # store only filenames
-    print('done')
     return recordings
     
 def loadFiles(f):
     fs = estd.MonoLoader(filename=f, sampleRate=SR)()
+    fs = hpcpgram(fs, sampleRate=SR)
     print(f)
     return (f, fs)
 
@@ -135,7 +132,7 @@ def processResult(p):
         pdict[i[0]].append([i[2], i[1]])
     for k, v in pdict.items():
         #smin = min(v, key=lambda x: x[0])
-        smin = sorted(v)[:2]
+        smin = sorted(v)[:2]        # store first 2 min distances
         #res.append([k] + smin)
         for i in smin: res.append([k] + i)
     return res
@@ -168,8 +165,6 @@ def process(apairs):
     manager = mp.Manager()
     count = manager.Value('i', 0)
     pool = mp.Pool(THREADS_SIMILARITY)
-    #for i, a in enumerate(apairs):
-    #    similarity(a)
     p = pool.map(similarity, apairs, chunksize=1)
     pool.close()
     pool.join()
@@ -177,6 +172,10 @@ def process(apairs):
         s.close()
         s.unlink()
     res = processResult(p)
+    #------
+    pickle.dump(res, open('similaritymin.pickle', 'wb'))
+    return
+    #-------
     pool = mp.Pool(THREADS_DTW)
     p = pool.map(runScript, res, chunksize=1)
     pool.close()
