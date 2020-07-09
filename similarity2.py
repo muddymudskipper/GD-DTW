@@ -59,14 +59,14 @@ def loadRecordings():
             #s = np.ndarray(hpc.shape, dtype=np.float32, buffer=gl.shms[-1].buf)
             #s[:] = hpc[:]
 
-            recordings[i][j] = ('/'.join(f[0].split('/')[-2:]), j, f[1].shape) # store only filenames
+            recordings[i][j] = ('/'.join(f[0].split('/')[-2:]), j, f[1].shape, f[2]) # store only filenames
     return recordings
     
 def loadFiles(f):
     fs = estd.MonoLoader(filename=f, sampleRate=SR)()
-    fs = hpcpgram(fs, sampleRate=SR)
+    hpc = hpcpgram(fs, sampleRate=SR)
     print(f)
-    return (f, fs)
+    return (f, hpc, len(fs))
 
 def combinedLength(x):
     l = 0
@@ -128,9 +128,8 @@ def processResult(p):
         if i[0] not in pdict: pdict[i[0]] = []
         pdict[i[0]].append([i[2], i[1]])
     for k, v in pdict.items():
-        #smin = min(v, key=lambda x: x[0])
         smin = sorted(v)[:2]        # store first 2 min distances
-        #res.append([k] + smin)
+        #smin = sorted(v)[:1]        # for testing
         for i in smin: res.append([k] + i)
     return res
 
@@ -139,39 +138,68 @@ def runScript(f):
     file1 = f[0]
     file2 = f[2]
     print(file1, file2)
-    resfiles = dtwstart(os.path.join(RECSDIR, file1), os.path.join(RECSDIR, file2))
-    return resfiles
+    resfile = dtwstart(os.path.join(RECSDIR, file1), os.path.join(RECSDIR, file2))
+    return resfile
 
 
 def start():
     filenames = loadRecordings()
     # compare to longest
+    '''
     audiopairs = []
+    matched_files = []
+
     for n in range(0, len(filenames)-1):
         apairs = list(itertools.product(filenames[n], filenames[-1]))
         audiopairs += apairs
-    process(audiopairs)
+    matched_files = process(audiopairs)
 
+    audiopairs = []
 
+    
+    for n in range(0, len(filenames)-2):
+        apairs = list(itertools.product(filenames[n], filenames[-2]))
+        audiopairs += apairs
+        audiopairs = list(filter(lambda x: x[0][0] not in matched_files, audiopairs))
+        print(audiopairs)
+
+    '''
+
+    matched_files = []
+    for i in range(1,len(filenames)):
+        audiopairs = []
+        print('RUN', i)
+        for n in range(0, len(filenames)-i):
+            apairs = list(itertools.product(filenames[n], filenames[-i]))
+            audiopairs += apairs
+            audiopairs = list(filter(lambda x: x[0][0] not in matched_files, audiopairs))
+        #print(audiopairs)
+        if len(audiopairs) > 0: matched_files += process(audiopairs)
+        else: break
+
+    
 def process(apairs):
     manager = mp.Manager()
     pool = mp.Pool(THREADS_SIMILARITY)
     p = pool.map(similarity, apairs, chunksize=1)
     pool.close()
     pool.join()
-    for s in gl.shms:
-        s.close()
-        s.unlink()
-
-    #res = processResult(p)
-    res = pickle.load(open('similaritymin.pickle'))
-    #pickle.dump(res, open('similaritymin.pickle', 'wb'))
+    #for s in gl.shms:
+    #    s.close()
+    #    s.unlink()
+    res = processResult(p)
+    #res = pickle.load(open('similaritymin.pickle', 'rb'))
+    #pickle.dump(res, open('similaritymin_test.pickle', 'wb'))
     #return
-    
     pool = mp.Pool(THREADS_DTW)
     p = pool.map(runScript, res, chunksize=1)
     pool.close()
     pool.join()
+    
+    matched_files = list(set(filter(lambda x: x != None, p)))
+
+    return matched_files
+    
     #json.dump(p, open(JSONFILE, 'w', encoding='utf-8'), sort_keys=True)
 
 
@@ -184,6 +212,9 @@ def etreeNumber(e):
 if __name__ == '__main__':
     os.system('ulimit -n 30000')
     start()
+    for s in gl.shms:
+        s.close()
+        s.unlink()
     os.system('ulimit -n 256')
     os.system('stty sane')
 

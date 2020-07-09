@@ -70,7 +70,7 @@ def removeNonlinear(wp):
         if i+slen > l+1: break
         slope, intercept, r_value = stats.linregress(wp[i:i+slen])[:3]
         slopes.append(slope)
-        if 1.05 > round(slope, 2) > 0.95:
+        if 1.04 > round(slope, 2) > 0.96:
             #wp_out = np.vstack([wp_out, wp[i:i+slen]])
             wp_plot.append(wp[i:i+slen])
     if len(wp_plot) == 1: wp_plot = []
@@ -149,6 +149,17 @@ def plotFigure2(ws, l1, l2, file1, file2):
     fsplit2 = file2.split('/')
     fname2 = '/'.join(fsplit2[-2:])
     pdfname = os.path.join(gl.dstdir, '{0}_{1}.pdf'.format(fsplit1[-1], fsplit2[-1]))
+
+    jsonname = os.path.join(gl.dstdir, '{0}_{1}.json'.format(fsplit1[-1], fsplit2[-1]))
+    dtw = ws[0]
+    if len(ws) > 1:
+        for d in ws[1:]: 
+            dtw = np.concatenate((dtw, d), axis=0)
+    dtw = dtw.tolist()
+    j = { 'dtw': dtw, 'lengths': [l1, l2] }
+    json.dump(j, open(jsonname, 'w', encoding='utf-8'), sort_keys=True)
+
+    
     #pdfname = os.path.join(gl.dstdir, 'test.pdf')
     #print(pdfname)
     #fname1 = '/'.join(file1.split('/')[-2:])
@@ -180,7 +191,7 @@ def makeFolders(f1, f2):
 
 
 def dtwstart(FILE1, FILE2):
-    resfiles = None
+    resfile = None
     makeFolders(FILE1, FILE2)
     #return
 
@@ -200,11 +211,11 @@ def dtwstart(FILE1, FILE2):
 
     if len(wp_plot) > 0:
         plotFigure2(wp_plot, len1, len2, FILE1, FILE2)
-        resfiles = (FILE1, FILE2)
+        resfile = '/'.join(FILE1.split('/')[-2:])
         dtw = wp_plot[0]
-        if len(wp_plot) > 1:
-            for d in wp_plot[1:]: 
-                dtw = np.concatenate((dtw, d), axis=0)
+        #if len(wp_plot) > 1:
+        #    for d in wp_plot[1:]: 
+        #        dtw = np.concatenate((dtw, d), axis=0)
         #dtw = dtw.tolist()
 
     
@@ -214,6 +225,6 @@ def dtwstart(FILE1, FILE2):
     #spamwriter = csv.writer(sys.stdout)
     #for i in dtw:
     #    spamwriter.writerow(i)
-    return resfiles
+    return resfile
 #main()
 
