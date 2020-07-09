@@ -17,9 +17,6 @@ import numpy as np
 from test_subdtw_NEW_tuning import dtwstart
 import pickle
 
-#THREADS = 12
-SCRIPT = 'test_subdtw-NEW_tuning.py'
-#SCRIPT = '../../test_subdtw-NEW_tuning_segments.command.py'
 JSONFILE = 'test.json'
 SR = 22050
 
@@ -141,13 +138,8 @@ def processResult(p):
 def runScript(f):
     file1 = f[0]
     file2 = f[2]
-    #print(('/').join(file1.split('/')[-2:]), ('/').join(file2.split('/')[-2:]))
     print(file1, file2)
-    #cmd = 'python {0} "{1}" "{2}"'.format(SCRIPT, file1, file2)
     resfiles = dtwstart(os.path.join(RECSDIR, file1), os.path.join(RECSDIR, file2))
-    #print(resfiles)
-    #print(cmd)
-    #p = Popen(cmd, shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
     return resfiles
 
 
@@ -163,7 +155,6 @@ def start():
 
 def process(apairs):
     manager = mp.Manager()
-    count = manager.Value('i', 0)
     pool = mp.Pool(THREADS_SIMILARITY)
     p = pool.map(similarity, apairs, chunksize=1)
     pool.close()
@@ -171,11 +162,12 @@ def process(apairs):
     for s in gl.shms:
         s.close()
         s.unlink()
-    res = processResult(p)
-    #------
-    pickle.dump(res, open('similaritymin.pickle', 'wb'))
-    return
-    #-------
+
+    #res = processResult(p)
+    res = pickle.load(open('similaritymin.pickle'))
+    #pickle.dump(res, open('similaritymin.pickle', 'wb'))
+    #return
+    
     pool = mp.Pool(THREADS_DTW)
     p = pool.map(runScript, res, chunksize=1)
     pool.close()
