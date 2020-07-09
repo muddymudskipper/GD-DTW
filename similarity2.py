@@ -2,8 +2,8 @@
 
 # 1. find longest performance
 # 2. try alignemnet of all others with performance from 1.
-# 3. store files with no alignment (TODO)
-# 4. repeat from 1. with unaligned files and reference next longest recording (TODO)
+# 3. store files with no alignment
+# 4. repeat from 1. with unaligned files and reference next longest recording
 
 # needs 64GB memory
 
