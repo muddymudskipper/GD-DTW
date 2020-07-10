@@ -18,7 +18,6 @@ from test_subdtw_NEW_tuning import dtwstart
 from uuid import uuid4
 #import pickle
 
-JSONFILE = 'test.json'
 SR = 22050
 
 RECSDIR = '/Volumes/Beratight2/SDTW/82-10-10'
@@ -201,7 +200,6 @@ def process(apairs):
 
     return matched_files
     
-    #json.dump(p, open(JSONFILE, 'w', encoding='utf-8'), sort_keys=True)
 
 
 def etreeNumber(e):

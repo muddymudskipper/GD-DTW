@@ -125,9 +125,9 @@ def process(recs):
 
     
 
-
+'''
 if __name__ == '__main__':
     start()
     os.system('stty sane')
-
+'''
 
