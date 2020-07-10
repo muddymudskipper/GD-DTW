@@ -81,23 +81,23 @@ def removeNonlinear(wp):
 
 def scaleDtw(wp, t):
     #wp[:, 1] *= 2**(-t / 1200)
-    wp[:, 0] *= 2**(-t / 1200)
+    wp[:, 0] *= 2**(t / 1200)
     return wp
 
 
-def monoWav(f, tuning=float(0)):
-    wav = os.path.join(TEMP, str(uuid4()) + '.wav')
-    if f.endswith('.shn'):
-        _f = os.path.join(TEMP, str(uuid4()) + '.wav')
-        cmd = 'shorten -x "{0}" "{1}"'.format(f, _f)
-        p = Popen(cmd, shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
-    else: _f = f
-    cmd = 'ffmpeg -i "{0}" -ar {1} -ac 1 "{2}"'.format(_f, SR, wav)
-    #print(cmd)
-    p = Popen(cmd, shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
-    if f.endswith('.shn'): os.remove(_f)
-
-    return wav
+#def monoWav(f, tuning=float(0)):
+#    wav = os.path.join(TEMP, str(uuid4()) + '.wav')
+#    if f.endswith('.shn'):
+#        _f = os.path.join(TEMP, str(uuid4()) + '.wav')
+#        cmd = 'shorten -x "{0}" "{1}"'.format(f, _f)
+#        p = Popen(cmd, shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
+#    else: _f = f
+#    cmd = 'ffmpeg -i "{0}" -ar {1} -ac 1 "{2}"'.format(_f, SR, wav)
+#    #print(cmd)
+#    p = Popen(cmd, shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
+#    if f.endswith('.shn'): os.remove(_f)
+#
+#    return wav
 
     #a, sr = sf.read(wav)
     #leng = len(a)
@@ -106,13 +106,13 @@ def monoWav(f, tuning=float(0)):
     #os.remove(wav)
     #return a, leng
 
-def readAudio(wav, tuning=float(0)):
-    a, sr = sf.read(wav)
-    os.remove(wav)
-    leng = len(a)
-    if tuning != float(0): 
-        a = resampleAudio(a, tuning)
-    return a, leng
+#def readAudio(wav, tuning=float(0)):
+#    a, sr = sf.read(wav)
+#    os.remove(wav)
+#    leng = len(a)
+#    if tuning != float(0): 
+#        a = resampleAudio(a, tuning)
+#    return a, leng
 
 def resampleAudio2(a, tuning=float(0)):
     if tuning != float(0): 
@@ -122,16 +122,16 @@ def resampleAudio2(a, tuning=float(0)):
     else:
         return a
 
-def resampleAudio(a, t):
-    ratio = 2**(t / 1200)
-    #print(t, ratio)
-    a = samplerate.resample(a, ratio, 'sinc_best')
-    return a
+#def resampleAudio(a, t):
+#    ratio = 2**(t / 1200)
+#    #print(t, ratio)
+#    a = samplerate.resample(a, ratio, 'sinc_best')
+#    return a
 
 
-def getChroma(a, tuning=0):
+def getChroma(a):
     # tuning Deviation (in fractions of a CQT bin) from A440 tuning
-    return librosa.feature.chroma_cens(y=a, sr=SR, hop_length=DTWFRAMESIZE, win_len_smooth=21, tuning=tuning/100)
+    return librosa.feature.chroma_cens(y=a, sr=SR, hop_length=DTWFRAMESIZE, win_len_smooth=21)
 
 def tuningFrequency(a, b):
     cmd = 'sonic-annotator -t tuning-difference.n3 -m "{0}" "{1}" -w csv --csv-stdout'.format(a, b)
@@ -221,7 +221,7 @@ def etreeNumber(e):
         except: pass
 
 
-def dtwstart(FILE1, FILE2, RECSDIR):
+def dtwstart(FILE1, FILE2, CHROMASHAPE2, RECSDIR):
     etree_number1 = etreeNumber(FILE1[0])
     etree_number2 = etreeNumber(FILE2[0])
 
@@ -241,8 +241,11 @@ def dtwstart(FILE1, FILE2, RECSDIR):
 
     file1_resampled = resampleAudio2(file1_buf, tuning)
     X = getChroma(file1_resampled)
-    Y = getChroma(file2_buf)
+    #Y = getChroma(file2_buf)
 
+    shmnameY = '{0}_{1}_chroma'.format(etree_number2, FILE2[1])
+    shmY = shared_memory.SharedMemory(name=shmnameY)
+    Y = np.ndarray(CHROMASHAPE2, dtype=np.float32, buffer=shmY.buf)
 
     filename1 = os.path.join(RECSDIR, FILE1[0])
     filename2 = os.path.join(RECSDIR, FILE2[0])

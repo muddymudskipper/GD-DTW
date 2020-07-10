@@ -25,7 +25,7 @@ RECSDIR = '/Volumes/Beratight2/SDTW/82-10-10'
 
 CPUS = 24
 THREADS_SIMILARITY = 24
-THREADS_DTW = 6
+THREADS_DTW = 7
 
 DTWFRAMESIZE = 512
 
@@ -38,12 +38,10 @@ def loadRecordings():
     print('loading audio files')
     recordings = []
     folders = [os.path.join(RECSDIR, d) for d in os.listdir(RECSDIR) if os.path.isdir(os.path.join(RECSDIR, d))]
-    for i, d in enumerate(folders[:2]):
-        content = []
+    for i, d in enumerate(folders):
         files = [os.path.join(d, f) for f in os.listdir(d) if f.lower().endswith(('flac', 'mp3'))]
-        pool = mp.Pool(24)
-        #p = pool.starmap(loadFiles, zip(files[:3], itertools.repeat(i)), chunksize=1)
-        p = pool.map(loadFiles, files[:3], chunksize=1)
+        pool = mp.Pool(CPUS)
+        p = pool.map(loadFiles, files, chunksize=1)
         pool.close()
         pool.join()
         p.sort()
@@ -62,34 +60,18 @@ def loadRecordings():
             s = np.ndarray(f[2].shape, dtype=np.float32, buffer=gl.shms[-1].buf)
             s[:] = f[2][:]
 
-            #if i > 0:
-            #    gl.shms.append(shared_memory.SharedMemory(create=True, size=f[3].nbytes, name='{0}_{1}_chroma'.format(etree_number, j)))
-            #    s = np.ndarray(f[3].shape, dtype=np.float32, buffer=gl.shms[-1].buf)
-            #    s[:] = f[3][:]
-            #    recordings[i][j] = ('/'.join(f[0].split('/')[-2:]), j, f[1].shape, f[2].shape, f[3].shape)
-
-            #else:
-            #    recordings[i][j] = ('/'.join(f[0].split('/')[-2:]), j, f[1].shape, f[2].shape)
             recordings[i][j] = ('/'.join(f[0].split('/')[-2:]), j, f[1].shape, f[2].shape)
             # 0: filename
             # 1: index
             # 2: audio shape
             # 3: hpcg shape
-            # (4: chroma shape)  # not first (shortest) because it will always be resampled in subdtw script
 
     return recordings
 
-#def loadFiles(f, i):
+
 def loadFiles(f):
     fs = estd.MonoLoader(filename=f, sampleRate=SR)()
     hpc = hpcpgram(fs, sampleRate=SR)
-    #if i > 0:
-    #    chroma = librosa.feature.chroma_cens(y=fs, sr=SR, hop_length=DTWFRAMESIZE, win_len_smooth=21)
-    #    print(f)
-    #    return (f, fs, hpc, chroma)
-    #else:
-    #    print(f)
-    #    return (f, fs, hpc)
     print(f)
     return (f, fs, hpc)
     
@@ -130,6 +112,7 @@ def similarity(audiopair):
     #return([f1, f2, distance])
     return([audiopair[0], audiopair[1], distance])
 
+
 def processResult(p):
     pdict = {}
     res = []
@@ -137,10 +120,19 @@ def processResult(p):
         if i[0] not in pdict: pdict[i[0]] = []
         pdict[i[0]].append([i[2], i[1]])
     for k, v in pdict.items():
-        #smin = sorted(v)[:2]        # store first 2 min distances
-        smin = sorted(v)[:1]        # for testing
+        smin = sorted(v)[:2]        # store first 2 min distances
+        #smin = sorted(v)[:1]        # for testing
         for i in smin: res.append([k] + [i[1]]) # store recording pairs with all info
-    print(res)
+
+    # calculate chromas for all audio files that are second input for dtw
+    audio_compared_to = []
+    [audio_compared_to.append(f[1]) for f in res]
+    audio_compared_to = list(set(audio_compared_to))
+    chroma_shapes = getChromas(audio_compared_to)
+    # append chroma shape
+    for i in res: i.append(chroma_shapes[i[1][0]][1])
+    #print(res)
+    #print(audio_compared_to)
     return res
 
 
@@ -149,8 +141,8 @@ def runScript(f):
     file2 = f[1][0]
     print(file1, file2)
     #resfile = dtwstart(os.path.join(RECSDIR, file1), os.path.join(RECSDIR, file2))
-
-    resfile = dtwstart(f[0], f[1], RECSDIR)
+    # f[2] = chroma shape of f[1]
+    resfile = dtwstart(f[0], f[1], f[2], RECSDIR)
     return resfile
 
 
@@ -167,18 +159,57 @@ def start():
             audiopairs += apairs
             audiopairs = list(filter(lambda x: x[0][0] not in matched_files, audiopairs))
         #print(audiopairs)
-        if len(audiopairs) > 0: matched_files += process(audiopairs)
+        if len(audiopairs) > 0: matched_files += process(audiopairs, filenames[-i])
         else: break
-
+        
         #break
 
-    
-def process(apairs):
+def unlinkShm(fs, ftype):
+    print('cleaning memory ({0})'.format(ftype))
+    for f in fs:
+        try:                # chroma might not exist for each
+            shmname = '{0}_{1}_{2}'.format(etreeNumber(f[0]), f[1], ftype)
+            #print(shmname)
+            shm = shared_memory.SharedMemory(name=shmname)
+            shm.close()
+            shm.unlink()
+        except: pass
+
+
+
+def getChromas(fs):
+    print('getting chromas')
+    pool = mp.Pool(CPUS)
+    p = pool.map(getChroma, fs, chunksize=1)
+    pool.close()
+    pool.join()
+    p.sort()
+    chroma_shapes = {}
+    for c in p:
+        gl.shms.append(shared_memory.SharedMemory(create=True, size=c[2].nbytes, name='{0}_{1}_chroma'.format(etreeNumber(c[0]), c[1])))
+        s = np.ndarray(c[2].shape, dtype=np.float32, buffer=gl.shms[-1].buf)
+        s[:] = c[2][:]   
+        chroma_shapes[c[0]] = (c[1], c[2].shape)
+    return chroma_shapes
+
+
+def getChroma(f):
+    shmname = '{0}_{1}_audio'.format(etreeNumber(f[0]), f[1])
+    shm = shared_memory.SharedMemory(name=shmname)
+    a = np.ndarray(f[2], dtype=np.float32, buffer=shm.buf)
+    c = librosa.feature.chroma_cens(y=a, sr=SR, hop_length=DTWFRAMESIZE, win_len_smooth=21)
+    print(f[0])
+    return (f[0], f[1], c)  # return filename, index, chroma
+
+
+def process(apairs, filenames2):
     #manager = mp.Manager()
     pool = mp.Pool(THREADS_SIMILARITY)
     p = pool.map(similarity, apairs, chunksize=1)
     pool.close()
     pool.join()
+    unlinkShm(filenames2, 'hpcg')
+    
     #for s in gl.shms:
     #    s.close()
     #    s.unlink()
@@ -190,7 +221,9 @@ def process(apairs):
     p = pool.map(runScript, res, chunksize=1)
     pool.close()
     pool.join()
-    
+    unlinkShm(filenames2, 'audio')
+    unlinkShm(filenames2, 'chroma')
+
     matched_files = list(set(filter(lambda x: x != None, p)))
 
     return matched_files
@@ -206,9 +239,11 @@ def etreeNumber(e):
 if __name__ == '__main__':
     os.system('ulimit -n 30000')
     start()
-    for s in gl.shms:
-        s.close()
-        s.unlink()
+    for s in gl.shms:   # there shouldn't be any open ones, but just in case
+        try:
+            s.close()
+            s.unlink()
+        except: pass
     os.system('ulimit -n 256')
     os.system('stty sane')
 
