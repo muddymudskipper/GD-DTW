@@ -18,16 +18,11 @@ np.seterr(divide='ignore', invalid='ignore')   # stats division by zero warning
 SR = 22050
 DTWFRAMESIZE = 512
 
-DIR = '/Volumes/Journal/Documents/OneDrive/OneDrive - Queen Mary, University of London/projects/SDTW/'
-TEMP = DIR + 'temp/'
-JSONFILE = DIR + 'test.json'
-
-TEMP = DIR + 'temp/'
-JSONFILE = DIR + 'test.json'
-PNGFILE = DIR + 'test.pdf'
-
-DST = DIR + '2020/results/'
-
+#DIR = '/Volumes/Journal/Documents/OneDrive/OneDrive - Queen Mary, University of London/projects/SDTW/'
+#TEMP = DIR + 'temp/'
+#DST = DIR + '2020/results/'
+TEMP = 'temp'
+DST = 'results'
 
 
 #FILE1 = sys.argv[1]
@@ -125,7 +120,7 @@ def plotFigure2(ws, l1, l2, file1, file2):
     fname1 = '/'.join(fsplit1[-2:])
     fsplit2 = file2.split('/')
     fname2 = '/'.join(fsplit2[-2:])
-    pdfname = os.path.join(gl.dstdir, '{0}_{1}.pdf'.format(fsplit1[-1], fsplit2[-1]))
+    pdfname = os.path.join(gl.dstdir, '{0}_{1}.png'.format(fsplit1[-1], fsplit2[-1]))
 
     jsonname = os.path.join(gl.dstdir, '{0}_{1}.json'.format(fsplit1[-1], fsplit2[-1]))
     dtw = ws[0]
@@ -161,9 +156,12 @@ def etreeNumber(e):
         except: pass
 
 
-def dtwstart(FILE1, FILE2, CHROMASHAPE2, RECSDIR):
-    etree_number1 = etreeNumber(FILE1[0])
-    etree_number2 = etreeNumber(FILE2[0])
+def dtwstart(FILE1, FILE2, CHROMASHAPE2):
+    filename1 = FILE1[0]
+    filename2 = FILE2[0]
+    
+    etree_number1 = etreeNumber(filename1)
+    etree_number2 = etreeNumber(filename2)
 
     resfile = None
     makeFolders(etree_number1, etree_number2)
@@ -187,8 +185,9 @@ def dtwstart(FILE1, FILE2, CHROMASHAPE2, RECSDIR):
     shmY = shared_memory.SharedMemory(name=shmnameY)
     Y = np.ndarray(CHROMASHAPE2, dtype=np.float32, buffer=shmY.buf)
 
-    filename1 = os.path.join(RECSDIR, FILE1[0])
-    filename2 = os.path.join(RECSDIR, FILE2[0])
+    #filename1 = os.path.join(RECSDIR, FILE1[0])
+    #filename2 = os.path.join(RECSDIR, FILE2[0])
+    
 
 
     wp_plot = libDtw(X, Y, tuning)
@@ -197,7 +196,8 @@ def dtwstart(FILE1, FILE2, CHROMASHAPE2, RECSDIR):
     if len(wp_plot) > 0:
         #plotFigure2(wp_plot, len1, len2, filename1, filename2)
         plotFigure2(wp_plot, FILE1[2][0], FILE2[2][0], filename1, filename2)
-        resfile = '/'.join(filename1.split('/')[-2:])
+        #resfile = '/'.join(filename1.split('/')[-2:])
+        resfile = filename1
         dtw = wp_plot[0]
 
     return resfile

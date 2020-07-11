@@ -24,9 +24,10 @@ import pickle
 SR = 22050
 
 #RECSDIR = '/Volumes/Beratight2/SDTW/82-07-29'
-DIR = '/Volumes/Journal/Documents/OneDrive/OneDrive - Queen Mary, University of London/projects/SDTW/'
-TEMPDIR = DIR + 'temp/'
-
+#DIR = '/Volumes/Journal/Documents/OneDrive/OneDrive - Queen Mary, University of London/projects/SDTW/'
+#TEMPDIR = DIR + 'temp/'
+TEMPDIR = 'temp'
+DSTDIR = 'results'
 
 DATE = '82-07-29'
 
@@ -71,7 +72,9 @@ def loadRecordings():
             s = np.ndarray(f[2].shape, dtype=np.float32, buffer=gl.shms[-1].buf)
             s[:] = f[2][:]
 
-            recordings[i][j] = ('/'.join(f[0].split('/')[-2:]), j, f[1].shape, f[2].shape)
+            #recordings[i][j] = ('/'.join(f[0].split('/')[-2:]), j, f[1].shape, f[2].shape)
+
+            recordings[i][j] = (f[0], j, f[1].shape, f[2].shape)
             # 0: filename
             # 1: index
             # 2: audio shape
@@ -161,7 +164,7 @@ def runScript(f):
     #print(file1, file2)
     #resfile = dtwstart(os.path.join(RECSDIR, file1), os.path.join(RECSDIR, file2))
     # f[2] = chroma shape of f[1]
-    resfile = dtwstart(f[0], f[1], f[2], RECSDIR)
+    resfile = dtwstart(f[0], f[1], f[2])
     return resfile
 
 
@@ -258,16 +261,21 @@ def etreeNumber(e):
         try: return int(j)
         except: pass
 
-    
+
+def remove_empty_folders():
+    folders = list(os.walk(DSTDIR))[1:]
+    for folder in folders:
+        if not folder[2]: os.rmdir(folder[0])
+
+
 if __name__ == '__main__':
     #os.system('ulimit -n 30000')
-    #loadRecordings()
     start()
     for s in gl.shms:   # there shouldn't be any open ones, but just in case
         try:
             s.close()
             s.unlink()
         except: pass
+    remove_empty_folders()
     #os.system('stty sane')
-    
 
