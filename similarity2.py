@@ -19,14 +19,16 @@ from uuid import uuid4
 from librosa.feature import chroma_cens
 from tqdm import tqdm
 from subprocess import Popen, DEVNULL, PIPE
-#import pickle
+import pickle
 
 SR = 22050
 
-RECSDIR = '/Volumes/Beratight2/SDTW/82-07-29'
+#RECSDIR = '/Volumes/Beratight2/SDTW/82-07-29'
 DIR = '/Volumes/Journal/Documents/OneDrive/OneDrive - Queen Mary, University of London/projects/SDTW/'
 TEMPDIR = DIR + 'temp/'
 
+
+DATE = '82-07-29'
 
 CPUS = 24
 THREADS_SIMILARITY = 24
@@ -41,14 +43,15 @@ class gl():
 
 def loadRecordings():
     print('loading audio files')
+    folders = pickle.load(open('date_folder_dict.pickle', 'rb'))[DATE]
     recordings = []
-    folders = [os.path.join(RECSDIR, d) for d in os.listdir(RECSDIR) if os.path.isdir(os.path.join(RECSDIR, d))]
-    for d in folders:
+    #folders = [os.path.join(RECSDIR, d) for d in os.listdir(RECSDIR) if os.path.isdir(os.path.join(RECSDIR, d))]
+    for d in folders[:2]:
         print('loading files for', d.split('/')[-1])
         files = [os.path.join(d, f) for f in os.listdir(d) if f.lower().endswith(('flac', 'mp3', 'shn'))]
         pool = mp.Pool(CPUS)
         #p = pool.map(loadFiles, files[:3], chunksize=1)
-        p = list(tqdm(pool.imap(loadFiles, files), total=len(files)))
+        p = list(tqdm(pool.imap(loadFiles, files[:2]), total=len(files[:2])))
         pool.close()
         pool.join()
         p = list(filter(lambda x: x != None, p)) # remove None type for unloadable files
@@ -235,7 +238,7 @@ def process(apairs, filenames2):
     #res = pickle.load(open('similaritymin.pickle', 'rb'))
     #pickle.dump(res, open('similaritymin_test.pickle', 'wb'))
     #return
-    print('calculating subsequence DTW')
+    print('calculating subsequence DTW paths')
     pool = mp.Pool(THREADS_DTW)
     #p = pool.map(runScript, res, chunksize=1)
     p = list(tqdm(pool.imap(runScript, res), total=len(res)))
@@ -258,13 +261,13 @@ def etreeNumber(e):
     
 if __name__ == '__main__':
     #os.system('ulimit -n 30000')
+    #loadRecordings()
     start()
     for s in gl.shms:   # there shouldn't be any open ones, but just in case
         try:
             s.close()
             s.unlink()
         except: pass
-    #os.system('ulimit -n 256')
     #os.system('stty sane')
-
+    
 
