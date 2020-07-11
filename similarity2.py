@@ -16,7 +16,8 @@ from subprocess import Popen, DEVNULL, PIPE
 import numpy as np
 from test_subdtw_NEW_tuning import dtwstart
 from uuid import uuid4
-import librosa
+from librosa.feature import chroma_cens
+from tqdm import tqdm
 #import pickle
 
 SR = 22050
@@ -39,11 +40,14 @@ def loadRecordings():
     recordings = []
     folders = [os.path.join(RECSDIR, d) for d in os.listdir(RECSDIR) if os.path.isdir(os.path.join(RECSDIR, d))]
     for i, d in enumerate(folders):
+        print('loading files for', d.split('/')[-1])
         files = [os.path.join(d, f) for f in os.listdir(d) if f.lower().endswith(('flac', 'mp3'))]
         pool = mp.Pool(CPUS)
-        p = pool.map(loadFiles, files, chunksize=1)
+        #p = pool.map(loadFiles, files[:3], chunksize=1)
+        p = list(tqdm(pool.imap(loadFiles, files), total=len(files)))
         pool.close()
         pool.join()
+        p = list(filter(lambda x: x != None, p)) # remove None type for unloadable files
         p.sort()
         recordings.append(p)
     recordings = sorted(recordings, key=lambda x: combinedLength(x))
@@ -70,10 +74,12 @@ def loadRecordings():
 
 
 def loadFiles(f):
-    fs = estd.MonoLoader(filename=f, sampleRate=SR)()
-    hpc = hpcpgram(fs, sampleRate=SR)
-    print(f)
-    return (f, fs, hpc)
+    try:
+        fs = estd.MonoLoader(filename=f, sampleRate=SR)()
+        hpc = hpcpgram(fs, sampleRate=SR)
+        #print(f)
+        return (f, fs, hpc)
+    except: pass
     
     
 def combinedLength(x):
@@ -107,7 +113,7 @@ def similarity(audiopair):
                                                     distanceType='asymmetric')(pair_crp)
     f1s = ('/').join(f1.split('/')[-2:])
     f2s = ('/').join(f2.split('/')[-2:])
-    print(distance, f1s, f2s)
+    #print(distance, f1s, f2s)
 
     #return([f1, f2, distance])
     return([audiopair[0], audiopair[1], distance])
@@ -139,7 +145,7 @@ def processResult(p):
 def runScript(f):
     file1 = f[0][0]
     file2 = f[1][0]
-    print(file1, file2)
+    #print(file1, file2)
     #resfile = dtwstart(os.path.join(RECSDIR, file1), os.path.join(RECSDIR, file2))
     # f[2] = chroma shape of f[1]
     resfile = dtwstart(f[0], f[1], f[2], RECSDIR)
@@ -180,7 +186,8 @@ def unlinkShm(fs, ftype):
 def getChromas(fs):
     print('getting chromas')
     pool = mp.Pool(CPUS)
-    p = pool.map(getChroma, fs, chunksize=1)
+    #p = pool.map(getChroma, fs, chunksize=1)
+    p = list(tqdm(pool.imap(getChroma, fs), total=len(fs)))
     pool.close()
     pool.join()
     p.sort()
@@ -197,15 +204,16 @@ def getChroma(f):
     shmname = '{0}_{1}_audio'.format(etreeNumber(f[0]), f[1])
     shm = shared_memory.SharedMemory(name=shmname)
     a = np.ndarray(f[2], dtype=np.float32, buffer=shm.buf)
-    c = librosa.feature.chroma_cens(y=a, sr=SR, hop_length=DTWFRAMESIZE, win_len_smooth=21)
-    print(f[0])
+    c = chroma_cens(y=a, sr=SR, hop_length=DTWFRAMESIZE, win_len_smooth=21)
+    #print(f[0])
     return (f[0], f[1], c)  # return filename, index, chroma
 
 
 def process(apairs, filenames2):
     #manager = mp.Manager()
+    print('measuring pairwise similarity')
     pool = mp.Pool(THREADS_SIMILARITY)
-    p = pool.map(similarity, apairs, chunksize=1)
+    p = list(tqdm(pool.imap(similarity, apairs), total=len(apairs)))
     pool.close()
     pool.join()
     unlinkShm(filenames2, 'hpcg')
@@ -217,8 +225,10 @@ def process(apairs, filenames2):
     #res = pickle.load(open('similaritymin.pickle', 'rb'))
     #pickle.dump(res, open('similaritymin_test.pickle', 'wb'))
     #return
+    print('calculating subsequence DTW')
     pool = mp.Pool(THREADS_DTW)
-    p = pool.map(runScript, res, chunksize=1)
+    #p = pool.map(runScript, res, chunksize=1)
+    p = list(tqdm(pool.imap(runScript, res), total=len(res)))
     pool.close()
     pool.join()
     unlinkShm(filenames2, 'audio')
