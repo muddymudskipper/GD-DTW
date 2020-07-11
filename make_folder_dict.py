@@ -11,6 +11,7 @@ DIRS = [os.path.join(SBDPATH, d) for d in os.listdir(SBDPATH) if os.path.isdir(o
 
 datedict = {}
 for d in DIRS:
+    if 'flac24' in d: continue
     print(d)
     date = d.split('/')[-1].split('.')[0]
     try:
