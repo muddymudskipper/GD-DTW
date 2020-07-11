@@ -1,7 +1,7 @@
 #!/opt/local/bin/python
 # test sub dtw post AES
 
-import librosa, os, json, sys, csv, samplerate
+import librosa, os, json, sys, csv, samplerate, warnings
 import numpy as np
 from subprocess import Popen, DEVNULL, PIPE
 from uuid import uuid4
@@ -11,6 +11,9 @@ from scipy import stats
 #from math import ceil
 from multiprocessing import shared_memory
 import vamp
+
+np.seterr(divide='ignore', invalid='ignore')   # stats division by zero warning
+
 
 SR = 22050
 DTWFRAMESIZE = 512
@@ -36,6 +39,7 @@ DST = DIR + '2020/results/'
 #FILE2 = '/Volumes/Beratight2/SDTW/test/gd1971-08-06d2t04_part.flac'
 #FILE1 = None
 #FILE2 = None
+
 
     
 class gl():
@@ -78,41 +82,10 @@ def removeNonlinear(wp):
     return wp_plot
 
 
-
 def scaleDtw(wp, t):
     #wp[:, 1] *= 2**(-t / 1200)
     wp[:, 0] *= 2**(t / 1200)
     return wp
-
-
-#def monoWav(f, tuning=float(0)):
-#    wav = os.path.join(TEMP, str(uuid4()) + '.wav')
-#    if f.endswith('.shn'):
-#        _f = os.path.join(TEMP, str(uuid4()) + '.wav')
-#        cmd = 'shorten -x "{0}" "{1}"'.format(f, _f)
-#        p = Popen(cmd, shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
-#    else: _f = f
-#    cmd = 'ffmpeg -i "{0}" -ar {1} -ac 1 "{2}"'.format(_f, SR, wav)
-#    #print(cmd)
-#    p = Popen(cmd, shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
-#    if f.endswith('.shn'): os.remove(_f)
-#
-#    return wav
-
-    #a, sr = sf.read(wav)
-    #leng = len(a)
-    #if tuning != float(0): 
-    #    a = resampleAudio(a, tuning)
-    #os.remove(wav)
-    #return a, leng
-
-#def readAudio(wav, tuning=float(0)):
-#    a, sr = sf.read(wav)
-#    os.remove(wav)
-#    leng = len(a)
-#    if tuning != float(0): 
-#        a = resampleAudio(a, tuning)
-#    return a, leng
 
 def resampleAudio2(a, tuning=float(0)):
     if tuning != float(0): 
@@ -122,32 +95,16 @@ def resampleAudio2(a, tuning=float(0)):
     else:
         return a
 
-#def resampleAudio(a, t):
-#    ratio = 2**(t / 1200)
-#    #print(t, ratio)
-#    a = samplerate.resample(a, ratio, 'sinc_best')
-#    return a
-
-
 def getChroma(a):
     # tuning Deviation (in fractions of a CQT bin) from A440 tuning
     return librosa.feature.chroma_cens(y=a, sr=SR, hop_length=DTWFRAMESIZE, win_len_smooth=21)
-
-def tuningFrequency(a, b):
-    cmd = 'sonic-annotator -t tuning-difference.n3 -m "{0}" "{1}" -w csv --csv-stdout'.format(a, b)
-    p = Popen(cmd, shell=True, stdout=PIPE, stderr=DEVNULL).communicate()[0]
-    #p = Popen(cmd, shell=True).communicate()[0]
-    diff = int(str(p).split(',')[-1][:-3])
-    #if abs(diff) > 150: diff = None
-    #with open("tuning_diff.txt", "w") as text_file:
-    #    text_file.write(str(diff))
-    return float(diff)
 
 
 def tuningFrequency2(a, b):
     two_channels = makeTwoChannels(a,b) 
     diff = vamp.collect(two_channels, SR, "tuning-difference:tuning-difference", output="cents", parameters={'maxduration': 300})
     diff = diff['list'][0]['values'][0]
+
     #print('diff = ', float(diff))
     return float(diff) 
 
@@ -161,9 +118,6 @@ def makeTwoChannels(a, b):
         return np.array([pad, b])
     else:
         return np.array([a, b])
-
-
-
 
 
 def plotFigure2(ws, l1, l2, file1, file2):
@@ -182,11 +136,6 @@ def plotFigure2(ws, l1, l2, file1, file2):
     j = { 'dtw': dtw, 'filenames': [fname1, fname2], 'lengths': [l1/SR, l2/SR] }
     json.dump(j, open(jsonname, 'w', encoding='utf-8'), sort_keys=True)
 
-    
-    #pdfname = os.path.join(gl.dstdir, 'test.pdf')
-    #print(pdfname)
-    #fname1 = '/'.join(file1.split('/')[-2:])
-    #fname2 = '/'.join(file2.split('/')[-2:])
     p = plt.figure()
     plt.title('{0}\n{1}'.format(fname1, fname2))
     for w in ws:
@@ -199,15 +148,6 @@ def plotFigure2(ws, l1, l2, file1, file2):
     plt.close(p)
 
 def makeFolders(e1, e2):
-    #fid = [None, None]
-    #for i, f in enumerate([f1, f2]):
-        #for j in f.split('/')[-2].split(('.')):
-        #    try:
-        #        fid[i] = int(j)
-        #        break
-        #    except: pass
-    #    fid[i] = etreeNumber(f)
-
     gl.dstdir = os.path.join(DST, '{0}_{1}'.format(e1, e2))
     for d in [TEMP, DST, gl.dstdir]:
         if not os.path.exists(d):
@@ -249,16 +189,7 @@ def dtwstart(FILE1, FILE2, CHROMASHAPE2, RECSDIR):
 
     filename1 = os.path.join(RECSDIR, FILE1[0])
     filename2 = os.path.join(RECSDIR, FILE2[0])
-    '''
-    file1 = monoWav(filename1)
-    file2 = monoWav(filename2)
-    tuning = tuningFrequency(file1, file2)
-    file1_np, len1 = readAudio(file1)
-    file2_np, len2 = readAudio(file2, tuning)
-    #print(Y.shape)
-    X = getChroma(file1_np)
-    Y = getChroma(file2_np)
-    '''
+
 
     wp_plot = libDtw(X, Y, tuning)
     #print(wp_plot)
@@ -268,18 +199,9 @@ def dtwstart(FILE1, FILE2, CHROMASHAPE2, RECSDIR):
         plotFigure2(wp_plot, FILE1[2][0], FILE2[2][0], filename1, filename2)
         resfile = '/'.join(filename1.split('/')[-2:])
         dtw = wp_plot[0]
-        #if len(wp_plot) > 1:
-        #    for d in wp_plot[1:]: 
-        #        dtw = np.concatenate((dtw, d), axis=0)
-        #dtw = dtw.tolist()
 
-    
-    #j = { 'dtw': dtw }
-    #json.dump(j, open(JSONFILE, 'w', encoding='utf-8'), sort_keys=True)
-    
-    #spamwriter = csv.writer(sys.stdout)
-    #for i in dtw:
-    #    spamwriter.writerow(i)
     return resfile
-#main()
+
+
+
 

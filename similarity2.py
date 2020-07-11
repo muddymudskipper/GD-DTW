@@ -18,15 +18,19 @@ from test_subdtw_NEW_tuning import dtwstart
 from uuid import uuid4
 from librosa.feature import chroma_cens
 from tqdm import tqdm
+from subprocess import Popen, DEVNULL, PIPE
 #import pickle
 
 SR = 22050
 
-RECSDIR = '/Volumes/Beratight2/SDTW/82-10-10'
+RECSDIR = '/Volumes/Beratight2/SDTW/82-07-29'
+DIR = '/Volumes/Journal/Documents/OneDrive/OneDrive - Queen Mary, University of London/projects/SDTW/'
+TEMPDIR = DIR + 'temp/'
+
 
 CPUS = 24
 THREADS_SIMILARITY = 24
-THREADS_DTW = 7
+THREADS_DTW = 8
 
 DTWFRAMESIZE = 512
 
@@ -39,9 +43,9 @@ def loadRecordings():
     print('loading audio files')
     recordings = []
     folders = [os.path.join(RECSDIR, d) for d in os.listdir(RECSDIR) if os.path.isdir(os.path.join(RECSDIR, d))]
-    for i, d in enumerate(folders):
+    for d in folders:
         print('loading files for', d.split('/')[-1])
-        files = [os.path.join(d, f) for f in os.listdir(d) if f.lower().endswith(('flac', 'mp3'))]
+        files = [os.path.join(d, f) for f in os.listdir(d) if f.lower().endswith(('flac', 'mp3', 'shn'))]
         pool = mp.Pool(CPUS)
         #p = pool.map(loadFiles, files[:3], chunksize=1)
         p = list(tqdm(pool.imap(loadFiles, files), total=len(files)))
@@ -75,7 +79,13 @@ def loadRecordings():
 
 def loadFiles(f):
     try:
-        fs = estd.MonoLoader(filename=f, sampleRate=SR)()
+        if f.endswith('.shn'):
+            _f = os.path.join(TEMPDIR, str(uuid4()) + '.wav')
+            cmd = 'shorten -x "{0}" "{1}"'.format(f, _f)
+            p = Popen(cmd, shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
+        else: _f = f
+        fs = estd.MonoLoader(filename=_f, sampleRate=SR)()
+        if f.endswith('.shn'): os.remove(_f)
         hpc = hpcpgram(fs, sampleRate=SR)
         #print(f)
         return (f, fs, hpc)
@@ -159,7 +169,7 @@ def start():
     matched_files = []
     for i in range(1,len(filenames)):
         audiopairs = []
-        print('RUN', i)
+        print('Run {0} of {1}'.format(i, len(filenames)-1))
         for n in range(0, len(filenames)-i):
             apairs = list(itertools.product(filenames[n], filenames[-i]))
             audiopairs += apairs
@@ -247,14 +257,14 @@ def etreeNumber(e):
 
     
 if __name__ == '__main__':
-    os.system('ulimit -n 30000')
+    #os.system('ulimit -n 30000')
     start()
     for s in gl.shms:   # there shouldn't be any open ones, but just in case
         try:
             s.close()
             s.unlink()
         except: pass
-    os.system('ulimit -n 256')
-    os.system('stty sane')
+    #os.system('ulimit -n 256')
+    #os.system('stty sane')
 
 
