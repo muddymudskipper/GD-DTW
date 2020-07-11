@@ -9,7 +9,7 @@
 
 import essentia.standard as estd
 from essentia.pytools.spectral import hpcpgram
-import itertools, os, json
+import itertools, os, json, sys
 import multiprocessing as mp
 from multiprocessing import shared_memory
 from subprocess import Popen, DEVNULL, PIPE
