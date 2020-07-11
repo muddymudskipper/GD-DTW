@@ -29,7 +29,8 @@ SR = 22050
 TEMPDIR = 'temp'
 DSTDIR = 'results'
 
-DATE = '82-07-29'
+DATE = sys.argv[1]
+#DATE = '82-07-29'
 
 CPUS = 24
 THREADS_SIMILARITY = 24
