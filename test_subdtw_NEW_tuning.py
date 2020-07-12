@@ -47,7 +47,6 @@ def libDtw(X, Y, tuning=float(0)):
     #sigma = np.array([[1, 1], [1, 2], [2, 1]])
     D, wp = librosa.sequence.dtw(X, Y, subseq=True)
     wp = processPath(wp, tuning)
-
     #with open("warping_path.txt", "w") as text_file:
     #    for w in wp: text_file.write(str(w) + '\n')
     return wp
@@ -82,7 +81,8 @@ def scaleDtw(wp, t):
     wp[:, 0] *= 2**(t / 1200)
     return wp
 
-def resampleAudio2(a, tuning=float(0)):
+
+def resampleAudio(a, tuning=float(0)):
     if tuning != float(0): 
         ratio = 2**(-tuning / 1200) # -tuning because resampling of audio 1
         #ar = resample(a, ratio, 'sinc_best')
@@ -91,12 +91,13 @@ def resampleAudio2(a, tuning=float(0)):
     else:
         return a
 
+
 def getChroma(a):
     # tuning Deviation (in fractions of a CQT bin) from A440 tuning
     return librosa.feature.chroma_cens(y=a, sr=SR, hop_length=DTWFRAMESIZE, win_len_smooth=21)
 
 
-def tuningFrequency2(a, b):
+def tuningFrequency(a, b):
     two_channels = makeTwoChannels(a,b) 
     diff = vamp.collect(two_channels, SR, "tuning-difference:tuning-difference", output="cents", parameters={'maxduration': 300})
     diff = diff['list'][0]['values'][0]
@@ -116,7 +117,7 @@ def makeTwoChannels(a, b):
         return np.array([a, b])
 
 
-def plotFigure2(ws, l1, l2, file1, file2):
+def plotFigure(ws, l1, l2, file1, file2, tuning):
     fsplit1 = file1.split('/')
     fname1 = '/'.join(fsplit1[-2:])
     fsplit2 = file2.split('/')
@@ -129,7 +130,7 @@ def plotFigure2(ws, l1, l2, file1, file2):
         for d in ws[1:]: 
             dtw = np.concatenate((dtw, d), axis=0)
     dtw = dtw.tolist()
-    j = { 'dtw': dtw, 'filenames': [fname1, fname2], 'lengths': [l1/SR, l2/SR] }
+    j = { 'dtw': dtw, 'filenames': [fname1, fname2], 'lengths': [l1/SR, l2/SR], 'tuning': tuning }
     json.dump(j, open(jsonname, 'w', encoding='utf-8'), sort_keys=True)
 
     p = plt.figure()
@@ -167,7 +168,6 @@ def dtwstart(FILE1, FILE2, CHROMASHAPE2, DATE):
 
     resfile = None
     makeFolders(etree_number1, etree_number2, DATE)
-    #return
 
     shmname1 = '{0}_{1}_audio'.format(etree_number1, FILE1[1])
     shm1 = shared_memory.SharedMemory(name=shmname1)
@@ -177,28 +177,20 @@ def dtwstart(FILE1, FILE2, CHROMASHAPE2, DATE):
     file2_buf = np.ndarray(FILE2[2], dtype=np.float32, buffer=shm2.buf)
     
 
-    tuning = tuningFrequency2(file1_buf, file2_buf)
+    tuning = tuningFrequency(file1_buf, file2_buf)
 
-    file1_resampled = resampleAudio2(file1_buf, tuning)
+    file1_resampled = resampleAudio(file1_buf, tuning)
     X = getChroma(file1_resampled)
-    #Y = getChroma(file2_buf)
 
     shmnameY = '{0}_{1}_chroma'.format(etree_number2, FILE2[1])
     shmY = shared_memory.SharedMemory(name=shmnameY)
     Y = np.ndarray(CHROMASHAPE2, dtype=np.float32, buffer=shmY.buf)
 
-    #filename1 = os.path.join(RECSDIR, FILE1[0])
-    #filename2 = os.path.join(RECSDIR, FILE2[0])
-    
-
-
     wp_plot = libDtw(X, Y, tuning)
     #print(wp_plot)
 
     if len(wp_plot) > 0:
-        #plotFigure2(wp_plot, len1, len2, filename1, filename2)
-        plotFigure2(wp_plot, FILE1[2][0], FILE2[2][0], filename1, filename2)
-        #resfile = '/'.join(filename1.split('/')[-2:])
+        plotFigure(wp_plot, FILE1[2][0], FILE2[2][0], filename1, filename2, tuning)
         resfile = filename1
         dtw = wp_plot[0]
 
