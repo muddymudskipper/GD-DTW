@@ -74,7 +74,7 @@ def removeNonlinear(wp):
     return wp_plot
 
 
-def _removeNonlinear(wp):
+def _removeNonlinear(wp):   # testing
     segment_length = 10   # segment length in seconds
     frames_per_second = int(SR / DTWFRAMESIZE)
     len_ceil_seconds = ceil(len(wp) / frames_per_second)
