@@ -69,7 +69,7 @@ def loadRecordings():
             s = np.ndarray(f[1].shape, dtype=np.float32, buffer=gl.shms[-1].buf)
             s[:] = f[1][:]
 
-            gl.shms.append(shared_memory.SharedMemory(create=True, size=f[2].nbytes, name='{0}_{1}_hpcg'.format(etree_number, j)))
+            gl.shms.append(shared_memory.SharedMemory(create=True, size=f[2].nbytes, name='{0}_{1}_hpcp'.format(etree_number, j)))
             s = np.ndarray(f[2].shape, dtype=np.float32, buffer=gl.shms[-1].buf)
             s[:] = f[2][:]
 
@@ -79,7 +79,7 @@ def loadRecordings():
             # 0: filename
             # 1: index
             # 2: audio shape
-            # 3: hpcg shape
+            # 3: hpcp shape
 
     return recordings
 
@@ -109,8 +109,8 @@ def similarity(audiopair):
     #load audio from shared memory
     f1 = audiopair[0][0]
     f2 = audiopair[1][0]
-    shmname1 = '{0}_{1}_hpcg'.format(etreeNumber(f1), audiopair[0][1])
-    shmname2 = '{0}_{1}_hpcg'.format(etreeNumber(f2), audiopair[1][1])
+    shmname1 = '{0}_{1}_hpcp'.format(etreeNumber(f1), audiopair[0][1])
+    shmname2 = '{0}_{1}_hpcp'.format(etreeNumber(f2), audiopair[1][1])
     shm1 = shared_memory.SharedMemory(name=shmname1)
     shm2 = shared_memory.SharedMemory(name=shmname2)
     file1_hpcp = np.ndarray(audiopair[0][3], dtype=np.float32, buffer=shm1.buf)
@@ -230,7 +230,7 @@ def process(apairs, filenames2):
     p = list(tqdm(pool.imap(similarity, apairs), total=len(apairs)))
     pool.close()
     pool.join()
-    unlinkShm(filenames2, 'hpcg')
+    unlinkShm(filenames2, 'hpcp')
     
     res = processResult(p)
     #res = pickle.load(open('similaritymin.pickle', 'rb'))
