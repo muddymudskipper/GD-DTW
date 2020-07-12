@@ -1,7 +1,8 @@
 #!/opt/local/bin/python
 # test sub dtw post AES
 
-import librosa, os, json, sys, csv, samplerate, warnings
+import librosa, os, json, sys, warnings
+from samplerate import resample
 import numpy as np
 from subprocess import Popen, DEVNULL, PIPE
 from uuid import uuid4
@@ -11,6 +12,7 @@ from scipy import stats
 #from math import ceil
 from multiprocessing import shared_memory
 import vamp
+
 
 np.seterr(divide='ignore', invalid='ignore')   # stats division by zero warning
 
@@ -61,31 +63,30 @@ def processPath(wp, tuning):
 
 
 def removeNonlinear(wp):
-    slen = int(10 * SR / DTWFRAMESIZE)
-    l = len(wp)
-    #wp_out = np.array([], dtype=np.float64).reshape(0,2)
+    segment_length = 10   # segment length in seconds
+    slen = segment_length * SR / DTWFRAMESIZE
+    number_of_chunks = len(wp) / slen
+    chunks = np.array_split(wp, number_of_chunks)  # split to chunks of roughly same length
     wp_plot = []
     slopes = []
-    for i in range(0, len(wp), slen):
-        if i+slen > l+1: break   # TODO: if i+0.5*slen > l  # last piece at least half of slen segment (end in x[start:end] can be > len(x))
-        slope, intercept, r_value = stats.linregress(wp[i:i+slen])[:3]
+    for chunk in chunks:
+        slope, intercept, r_value = stats.linregress(chunk)[:3]
         slopes.append(slope)
         if 1.04 > round(slope, 2) > 0.96:
-            #wp_out = np.vstack([wp_out, wp[i:i+slen]])
-            wp_plot.append(wp[i:i+slen])
-    if len(wp_plot) == 1: wp_plot = []
+            wp_plot.append(chunk)
+    if len(wp_plot) == 1: wp_plot = []  # testing: omit if only one chunk is aligned to avoid false positives
     return wp_plot
 
 
 def scaleDtw(wp, t):
-    #wp[:, 1] *= 2**(-t / 1200)
     wp[:, 0] *= 2**(t / 1200)
     return wp
 
 def resampleAudio2(a, tuning=float(0)):
     if tuning != float(0): 
         ratio = 2**(-tuning / 1200) # -tuning because resampling of audio 1
-        ar = samplerate.resample(a, ratio, 'sinc_best') 
+        #ar = resample(a, ratio, 'sinc_best')
+        ar = resample(a, ratio, 'sinc_medium')
         return ar
     else:
         return a
@@ -142,9 +143,10 @@ def plotFigure2(ws, l1, l2, file1, file2):
     p.savefig(pdfname, bbox_inches='tight')
     plt.close(p)
 
-def makeFolders(e1, e2):
-    gl.dstdir = os.path.join(DST, '{0}_{1}'.format(e1, e2))
-    for d in [TEMP, DST, gl.dstdir]:
+def makeFolders(e1, e2, date):
+    datedir = os.path.join(DST, date)
+    gl.dstdir = os.path.join(datedir, '{0}_{1}'.format(e1, e2))
+    for d in [TEMP, DST, datedir, gl.dstdir]:
         if not os.path.exists(d):
             try: os.makedirs(d)
             except: pass
@@ -156,7 +158,7 @@ def etreeNumber(e):
         except: pass
 
 
-def dtwstart(FILE1, FILE2, CHROMASHAPE2):
+def dtwstart(FILE1, FILE2, CHROMASHAPE2, DATE):
     filename1 = FILE1[0]
     filename2 = FILE2[0]
     
@@ -164,7 +166,7 @@ def dtwstart(FILE1, FILE2, CHROMASHAPE2):
     etree_number2 = etreeNumber(filename2)
 
     resfile = None
-    makeFolders(etree_number1, etree_number2)
+    makeFolders(etree_number1, etree_number2, DATE)
     #return
 
     shmname1 = '{0}_{1}_audio'.format(etree_number1, FILE1[1])

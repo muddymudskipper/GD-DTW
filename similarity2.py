@@ -26,11 +26,12 @@ SR = 22050
 #RECSDIR = '/Volumes/Beratight2/SDTW/82-07-29'
 #DIR = '/Volumes/Journal/Documents/OneDrive/OneDrive - Queen Mary, University of London/projects/SDTW/'
 #TEMPDIR = DIR + 'temp/'
-TEMPDIR = 'temp'
-DSTDIR = 'results'
+
 
 DATE = sys.argv[1]
 #DATE = '82-07-29'
+TEMPDIR = 'temp'
+DSTDIR = os.path.join('results', DATE)
 
 CPUS = 24
 THREADS_SIMILARITY = 24
@@ -130,9 +131,8 @@ def similarity(audiopair):
                                                     distanceType='asymmetric')(pair_crp)
     f1s = ('/').join(f1.split('/')[-2:])
     f2s = ('/').join(f2.split('/')[-2:])
+    
     #print(distance, f1s, f2s)
-
-    #return([f1, f2, distance])
     return([audiopair[0], audiopair[1], distance])
 
 
@@ -165,7 +165,7 @@ def runScript(f):
     #print(file1, file2)
     #resfile = dtwstart(os.path.join(RECSDIR, file1), os.path.join(RECSDIR, file2))
     # f[2] = chroma shape of f[1]
-    resfile = dtwstart(f[0], f[1], f[2])
+    resfile = dtwstart(f[0], f[1], f[2], DATE)
     return resfile
 
 
@@ -181,7 +181,7 @@ def start():
             apairs = list(itertools.product(filenames[n], filenames[-i]))
             audiopairs += apairs
             audiopairs = list(filter(lambda x: x[0][0] not in matched_files, audiopairs))
-        #print(audiopairs)
+        #for p in audiopairs: print(p)
         if len(audiopairs) > 0: matched_files += process(audiopairs, filenames[-i])
         else: break
         
