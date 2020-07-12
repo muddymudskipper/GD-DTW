@@ -53,7 +53,6 @@ def loadRecordings():
         print('loading files for', d.split('/')[-1])
         files = [os.path.join(d, f) for f in os.listdir(d) if f.lower().endswith(('flac', 'mp3', 'shn'))]
         pool = mp.Pool(CPUS)
-        #p = pool.map(loadFiles, files[:3], chunksize=1)
         p = list(tqdm(pool.imap(loadFiles, files), total=len(files)))
         pool.close()
         pool.join()
@@ -108,13 +107,12 @@ def combinedLength(x):
 
 def similarity(audiopair):
     #load audio from shared memory
-    f1 = audiopair[0][0]
-    f2 = audiopair[1][0]
+    #f1 = audiopair[0][0]
+    #f2 = audiopair[1][0]
     shmname1 = '{0}_{1}_hpcg'.format(etreeNumber(f1), audiopair[0][1])
     shmname2 = '{0}_{1}_hpcg'.format(etreeNumber(f2), audiopair[1][1])
     shm1 = shared_memory.SharedMemory(name=shmname1)
     shm2 = shared_memory.SharedMemory(name=shmname2)
-
     file1_hpcp = np.ndarray(audiopair[0][3], dtype=np.float32, buffer=shm1.buf)
     file2_hpcp = np.ndarray(audiopair[1][3], dtype=np.float32, buffer=shm2.buf)
 
@@ -129,9 +127,8 @@ def similarity(audiopair):
                                                     disExtension=0.5,
                                                     alignmentType='serra09',
                                                     distanceType='asymmetric')(pair_crp)
-    f1s = ('/').join(f1.split('/')[-2:])
-    f2s = ('/').join(f2.split('/')[-2:])
-    
+    #f1s = ('/').join(f1.split('/')[-2:])
+    #f2s = ('/').join(f2.split('/')[-2:])
     #print(distance, f1s, f2s)
     return([audiopair[0], audiopair[1], distance])
 
@@ -235,9 +232,6 @@ def process(apairs, filenames2):
     pool.join()
     unlinkShm(filenames2, 'hpcg')
     
-    #for s in gl.shms:
-    #    s.close()
-    #    s.unlink()
     res = processResult(p)
     #res = pickle.load(open('similaritymin.pickle', 'rb'))
     #pickle.dump(res, open('similaritymin_test.pickle', 'wb'))

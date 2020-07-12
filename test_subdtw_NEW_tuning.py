@@ -6,10 +6,9 @@ from samplerate import resample
 import numpy as np
 from subprocess import Popen, DEVNULL, PIPE
 from uuid import uuid4
-import soundfile as sf
 import matplotlib.pyplot as plt
 from scipy import stats
-#from math import ceil
+from math import ceil
 from multiprocessing import shared_memory
 import vamp
 
@@ -71,6 +70,22 @@ def removeNonlinear(wp):
         slope, intercept, r_value = stats.linregress(chunk)[:3]
         if 1.04 > round(slope, 2) > 0.96:
             wp_plot.append(chunk)
+    if len(wp_plot) == 1: wp_plot = []  # testing: omit if only one chunk is aligned to avoid false positives
+    return wp_plot
+
+
+def _removeNonlinear(wp):
+    segment_length = 10   # segment length in seconds
+    frames_per_second = int(SR / DTWFRAMESIZE)
+    len_ceil_seconds = ceil(len(wp) / frames_per_second)
+    wp_plot = []
+    # next chunks with 1s shifting window of 10s:
+    for n in range(0, len_ceil_seconds):
+         chunk = wp[n*frames_per_second:(n+10)*frames_per_second]
+         slope, intercept, r_value = stats.linregress(chunk)[:3]
+         if 1.04 > round(slope, 2) > 0.96:
+             if len(wp_plot) == 0: wp_plot.append(chunk)
+             else: wp_plot.append(chunk[-frames_per_second:])
     if len(wp_plot) == 1: wp_plot = []  # testing: omit if only one chunk is aligned to avoid false positives
     return wp_plot
 
@@ -141,6 +156,7 @@ def plotFigure(ws, l1, l2, file1, file2, tuning):
     #print(pdfname)
     p.savefig(pdfname, bbox_inches='tight')
     plt.close(p)
+
 
 def makeFolders(e1, e2, date):
     datedir = os.path.join(DST, date)
