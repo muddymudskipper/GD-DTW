@@ -67,10 +67,8 @@ def removeNonlinear(wp):
     number_of_chunks = len(wp) / slen
     chunks = np.array_split(wp, number_of_chunks)  # split to chunks of roughly same length
     wp_plot = []
-    slopes = []
     for chunk in chunks:
         slope, intercept, r_value = stats.linregress(chunk)[:3]
-        slopes.append(slope)
         if 1.04 > round(slope, 2) > 0.96:
             wp_plot.append(chunk)
     if len(wp_plot) == 1: wp_plot = []  # testing: omit if only one chunk is aligned to avoid false positives
