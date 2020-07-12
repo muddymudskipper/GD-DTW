@@ -107,8 +107,8 @@ def combinedLength(x):
 
 def similarity(audiopair):
     #load audio from shared memory
-    #f1 = audiopair[0][0]
-    #f2 = audiopair[1][0]
+    f1 = audiopair[0][0]
+    f2 = audiopair[1][0]
     shmname1 = '{0}_{1}_hpcg'.format(etreeNumber(f1), audiopair[0][1])
     shmname2 = '{0}_{1}_hpcg'.format(etreeNumber(f2), audiopair[1][1])
     shm1 = shared_memory.SharedMemory(name=shmname1)
