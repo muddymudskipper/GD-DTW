@@ -20,6 +20,9 @@ from librosa.feature import chroma_cens
 from tqdm import tqdm
 from subprocess import Popen, DEVNULL, PIPE
 import pickle
+from task_processor import TaskProcessor
+from multiprocessing.managers import SharedMemoryManager
+
 
 SR = 22050
 
@@ -28,6 +31,7 @@ SR = 22050
 #TEMPDIR = DIR + 'temp/'
 
 
+MAX_MEM_GB = 54
 DATE = sys.argv[1]
 #DATE = '82-07-29'
 TEMPDIR = 'temp'
@@ -35,7 +39,7 @@ DSTDIR = os.path.join('results', DATE)
 
 CPUS = 24
 THREADS_SIMILARITY = 24
-THREADS_DTW = 8
+THREADS_DTW = 12
 
 DTWFRAMESIZE = 512
 
@@ -73,9 +77,9 @@ def loadRecordings():
             s = np.ndarray(f[2].shape, dtype=np.float32, buffer=gl.shms[-1].buf)
             s[:] = f[2][:]
 
-            #recordings[i][j] = ('/'.join(f[0].split('/')[-2:]), j, f[1].shape, f[2].shape)
+            recordings[i][j] = ('/'.join(f[0].split('/')[-2:]), j, f[1].shape, f[2].shape)
 
-            recordings[i][j] = (f[0], j, f[1].shape, f[2].shape)
+            #recordings[i][j] = (f[0], j, f[1].shape, f[2].shape)
             # 0: filename
             # 1: index
             # 2: audio shape
@@ -105,7 +109,7 @@ def combinedLength(x):
     return l
 
 
-def similarity(audiopair):
+def similarity(audiopair, q):
     #load audio from shared memory
     f1 = audiopair[0][0]
     f2 = audiopair[1][0]
@@ -130,7 +134,8 @@ def similarity(audiopair):
     #f1s = ('/').join(f1.split('/')[-2:])
     #f2s = ('/').join(f2.split('/')[-2:])
     #print(distance, f1s, f2s)
-    return([audiopair[0], audiopair[1], distance])
+    q.put([audiopair[0], audiopair[1], distance])
+    #return([audiopair[0], audiopair[1], distance])
 
 
 def processResult(p):
@@ -156,14 +161,15 @@ def processResult(p):
     return res
 
 
-def runScript(f):
+def runScript(f, q):
     file1 = f[0][0]
     file2 = f[1][0]
     #print(file1, file2)
     #resfile = dtwstart(os.path.join(RECSDIR, file1), os.path.join(RECSDIR, file2))
     # f[2] = chroma shape of f[1]
     resfile = dtwstart(f[0], f[1], f[2], DATE)
-    return resfile
+    q.put(resfile)
+    #return resfile
 
 
 def start():
@@ -226,10 +232,21 @@ def getChroma(f):
 def process(apairs, filenames2):
     #manager = mp.Manager()
     print('measuring pairwise similarity')
-    pool = mp.Pool(THREADS_SIMILARITY)
-    p = list(tqdm(pool.imap(similarity, apairs), total=len(apairs)))
-    pool.close()
-    pool.join()
+    
+    #pool = mp.Pool(THREADS_SIMILARITY)
+    #p = list(tqdm(pool.imap(similarity, apairs), total=len(apairs)))
+    #pool.close()
+    #pool.join()
+
+    MAX_GB = 40
+    qout = mp.Queue()
+    tasks = [mp.Process(target=similarity, args=(a, qout)) for a in apairs]
+    tp = TaskProcessor(n_cores=THREADS_SIMILARITY, max_gb=MAX_GB, tasks=tasks)
+    tp.start()
+    tp.join()
+    p = getQueue(qout)
+
+
     unlinkShm(filenames2, 'hpcp')
     
     res = processResult(p)
@@ -237,18 +254,34 @@ def process(apairs, filenames2):
     #pickle.dump(res, open('similaritymin_test.pickle', 'wb'))
     #return
     print('calculating subsequence DTW paths')
-    pool = mp.Pool(THREADS_DTW)
-    #p = pool.map(runScript, res, chunksize=1)
-    p = list(tqdm(pool.imap(runScript, res), total=len(res)))
-    pool.close()
-    pool.join()
+
+    #pool = mp.Pool(THREADS_DTW)
+    #p = list(tqdm(pool.imap(runScript, res), total=len(res)))
+    #pool.close()
+    #pool.join()
+
+    
+    qout = mp.Queue()
+    tasks = [mp.Process(target=runScript, args=(r, qout)) for r in res]
+    tp = TaskProcessor(n_cores=THREADS_DTW, max_gb=MAX_GB, tasks=tasks)
+    tp.start()
+    tp.join()
+    p = getQueue(qout)
+
     unlinkShm(filenames2, 'audio')
     unlinkShm(filenames2, 'chroma')
-
+    
     matched_files = list(set(filter(lambda x: x != None, p)))
-
+    #print(matched_files)
     return matched_files
     
+
+def getQueue(q):
+    res = []
+    q.put(-1)
+    for i in iter(q.get, -1):
+        res.append(i)
+    return res
 
 
 def etreeNumber(e):

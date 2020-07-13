@@ -49,6 +49,7 @@ def libDtw(X, Y, tuning=float(0)):
     #with open("warping_path.txt", "w") as text_file:
     #    for w in wp: text_file.write(str(w) + '\n')
     return wp
+    
 
 
 def processPath(wp, tuning):
@@ -132,9 +133,9 @@ def makeTwoChannels(a, b):
 
 def plotFigure(ws, l1, l2, file1, file2, tuning):
     fsplit1 = file1.split('/')
-    fname1 = '/'.join(fsplit1[-2:])
+    #fname1 = '/'.join(fsplit1[-2:])
     fsplit2 = file2.split('/')
-    fname2 = '/'.join(fsplit2[-2:])
+    #fname2 = '/'.join(fsplit2[-2:])
     pdfname = os.path.join(gl.dstdir, '{0}_{1}.png'.format(fsplit1[-1], fsplit2[-1]))
 
     jsonname = os.path.join(gl.dstdir, '{0}_{1}.json'.format(fsplit1[-1], fsplit2[-1]))
@@ -143,11 +144,11 @@ def plotFigure(ws, l1, l2, file1, file2, tuning):
         for d in ws[1:]: 
             dtw = np.concatenate((dtw, d), axis=0)
     dtw = dtw.tolist()
-    j = { 'dtw': dtw, 'filenames': [fname1, fname2], 'lengths': [l1/SR, l2/SR], 'tuning': tuning }
+    j = { 'dtw': dtw, 'filenames': [file1, file2], 'lengths': [l1/SR, l2/SR], 'tuning': tuning }
     json.dump(j, open(jsonname, 'w', encoding='utf-8'), sort_keys=True)
 
     p = plt.figure()
-    plt.title('{0}\n{1}'.format(fname1, fname2))
+    plt.title('{0}\n{1}'.format(file1, file2))
     for w in ws:
         plt.plot(w[:, 0], w[:, 1], color='y')
     plt.plot(0, 0, color='w')  # include full audio length in plot

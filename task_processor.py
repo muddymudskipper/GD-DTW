@@ -7,6 +7,7 @@ from tqdm import tqdm
 import psutil
 
 
+
 class TaskProcessor(Thread):
     """Processor class which monitors memory usage for running
     tasks (processes). Suspends execution for tasks surpassing
@@ -19,10 +20,11 @@ class TaskProcessor(Thread):
     def __init__(self, n_cores, max_gb, tasks):
         super().__init__()
         self.n_cores = n_cores
+        self.max_gb = max_gb
         self.max_mib = max_gb * 953.67431640625  # memory threshold
 
-        #self.total_tasks = len(tasks)
-        #self.finished_tasks = 0
+        self.total_tasks = len(tasks)
+        self.finished_tasks = 0
         self.progress = tqdm(total=len(tasks))
         self.tasks = deque(tasks)
 
@@ -45,7 +47,7 @@ class TaskProcessor(Thread):
             # for further process-management we here just need the
             # psutil.Process wrapper
             self._running_tasks.append(psutil.Process(pid=p.pid))
-            print(f'Started process: {self._running_tasks[-1]}')
+            #print(f'Started process: {self._running_tasks[-1]}')
             
 
     def _monitor_running_tasks(self):
@@ -64,12 +66,12 @@ class TaskProcessor(Thread):
             for p in actual_tasks:
                 if not p.is_running():  # process has finished
                     self._running_tasks.remove(p)
-                    print(f'Removed finished process: {p}')
-                    #self.finished_tasks += 1
+                    #print(f'Removed finished process: {p}')
+                    self.finished_tasks += 1
                     self.progress.update(1)
                     if len(self._running_tasks) < self.n_cores and len(self._suspended_tasks) > 0:  # do until all tasks started
                         resume_p = self._suspended_tasks[0]
-                        print(f'\nResuming process: {resume_p}')
+                        print(f'Resuming process: {resume_p}')
                         resume_p.resume()
                         self._running_tasks.append(psutil.Process(pid=resume_p.pid))
                         self._suspended_tasks.remove(resume_p)
@@ -94,11 +96,20 @@ class TaskProcessor(Thread):
                     #    self._suspended_tasks.append(p)
                     #    print(f'Suspended process: {p}')
             
-            #if self.finished_tasks == self.total_tasks - 1: # if all but one finished, break and process last suspended track
-            #    break
+            
+            
+            # if all suspended, incerase to 60GB and halt if it doesn't work :(
+
+            if len(self._running_tasks) == 0 and self.max_gb == 60 and self.finished_tasks != self.total_tasks:
+                print('MEMORY OVERLOAD: STOPPED!')
+            elif len(self._running_tasks) == 0 and self.finished_tasks != self.total_tasks:
+                self.max_gb = 60
+                self.max_mib = self.max_gb * 953.67431640625
+            
+
+            
 
             time.sleep(1)
-
 
 '''
     def _process_suspended_tasks(self):
