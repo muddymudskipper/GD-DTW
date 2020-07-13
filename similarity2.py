@@ -31,15 +31,16 @@ SR = 22050
 #TEMPDIR = DIR + 'temp/'
 
 
-MAX_MEM_GB = 54
+MAX_MEM_GB = 50
 DATE = sys.argv[1]
 #DATE = '82-07-29'
 TEMPDIR = 'temp'
 DSTDIR = os.path.join('results', DATE)
 
-CPUS = 24
+THREADS_LOADING = 24
+THREADS_CHROMA = 24
 THREADS_SIMILARITY = 24
-THREADS_DTW = 12
+THREADS_DTW = 10
 
 DTWFRAMESIZE = 512
 
@@ -53,11 +54,11 @@ def loadRecordings():
     folders = pickle.load(open('date_folder_dict.pickle', 'rb'))[DATE]
     recordings = []
     #folders = [os.path.join(RECSDIR, d) for d in os.listdir(RECSDIR) if os.path.isdir(os.path.join(RECSDIR, d))]
-    for d in folders:
+    for d in folders[:5]:
         print('loading files for', d.split('/')[-1])
         files = [os.path.join(d, f) for f in os.listdir(d) if f.lower().endswith(('flac', 'mp3', 'shn'))]
-        pool = mp.Pool(CPUS)
-        p = list(tqdm(pool.imap(loadFiles, files), total=len(files)))
+        pool = mp.Pool(THREADS_LOADING)
+        p = list(tqdm(pool.imap(loadFiles, files[:5]), total=len(files[:5])))
         pool.close()
         pool.join()
         p = list(filter(lambda x: x != None, p)) # remove None type for unloadable files
@@ -205,7 +206,7 @@ def unlinkShm(fs, ftype):
 
 def getChromas(fs):
     print('getting chromas')
-    pool = mp.Pool(CPUS)
+    pool = mp.Pool(THREADS_CHROMA)
     #p = pool.map(getChroma, fs, chunksize=1)
     p = list(tqdm(pool.imap(getChroma, fs), total=len(fs)))
     pool.close()
@@ -238,13 +239,14 @@ def process(apairs, filenames2):
     #pool.close()
     #pool.join()
 
-    MAX_GB = 40
-    qout = mp.Queue()
-    tasks = [mp.Process(target=similarity, args=(a, qout)) for a in apairs]
-    tp = TaskProcessor(n_cores=THREADS_SIMILARITY, max_gb=MAX_GB, tasks=tasks)
+ 
+    qout_s = mp.Queue()
+    tasks = [mp.Process(target=similarity, args=(a, qout_s)) for a in apairs]
+    tp = TaskProcessor(n_cores=THREADS_SIMILARITY, max_gb=MAX_MEM_GB, tasks=tasks)
     tp.start()
     tp.join()
-    p = getQueue(qout)
+    p = getQueue(qout_s)
+    qout_s.close()
 
 
     unlinkShm(filenames2, 'hpcp')
@@ -261,13 +263,13 @@ def process(apairs, filenames2):
     #pool.join()
 
     
-    qout = mp.Queue()
-    tasks = [mp.Process(target=runScript, args=(r, qout)) for r in res]
-    tp = TaskProcessor(n_cores=THREADS_DTW, max_gb=MAX_GB, tasks=tasks)
+    qout_r = mp.Queue()
+    tasks = [mp.Process(target=runScript, args=(r, qout_r)) for r in res]
+    tp = TaskProcessor(n_cores=THREADS_DTW, max_gb=MAX_MEM_GB, tasks=tasks)
     tp.start()
     tp.join()
-    p = getQueue(qout)
-
+    p = getQueue(qout_r)
+    qout_r.close()
     unlinkShm(filenames2, 'audio')
     unlinkShm(filenames2, 'chroma')
     

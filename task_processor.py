@@ -36,11 +36,12 @@ class TaskProcessor(Thread):
         """Main-function in new thread."""
         self._update_running_tasks()
         self._monitor_running_tasks()
-        #self._process_suspended_tasks()    #only last suspended
+        self._process_suspended_tasks()    # not sure if they can be some left
         self.progress.close()
 
     def _update_running_tasks(self):
         """Start new tasks if we have less running tasks than cores."""
+
         while len(self._running_tasks) < self.n_cores and len(self.tasks) > 0:
             p = self.tasks.popleft()
             p.start()
@@ -69,21 +70,27 @@ class TaskProcessor(Thread):
                     #print(f'Removed finished process: {p}')
                     self.finished_tasks += 1
                     self.progress.update(1)
+                    
+                    '''
                     if len(self._running_tasks) < self.n_cores and len(self._suspended_tasks) > 0:  # do until all tasks started
                         resume_p = self._suspended_tasks[0]
                         print(f'Resuming process: {resume_p}')
                         resume_p.resume()
                         self._running_tasks.append(psutil.Process(pid=resume_p.pid))
                         self._suspended_tasks.remove(resume_p)
-                        actual_tasks = self._running_tasks.copy()
-
-
-            for p in actual_tasks:
-                if p.is_running():
-                    p_mem = p.memory_info().rss / 2 ** 20
-                    total_mem += p_mem
-                    active_mems.append((p_mem, p))
-            
+                    ...
+                        
+            #actual_tasks = self._running_tasks.copy()'''
+                else:
+            #for p in actual_tasks:
+                #if p.is_running():
+                    #print(p)
+                    try:    # ProcessLookupError: [Errno 3] No such process (originated from proc_pidinfo()) # at some point in similarity process, why?
+                        p_mem = p.memory_info().rss / 2 ** 20
+                        total_mem += p_mem
+                        active_mems.append((p_mem, p))
+                    except: print(f'Not found:', p)
+            print(total_mem)
             if total_mem > self.max_mib:    # 40GB
                 min_mem_p = min(active_mems)[1]
                 min_mem_p.suspend()
@@ -95,6 +102,14 @@ class TaskProcessor(Thread):
                     #    self._running_tasks.remove(p)
                     #    self._suspended_tasks.append(p)
                     #    print(f'Suspended process: {p}')
+            else:
+                if len(self._running_tasks) < self.n_cores and len(self._suspended_tasks) > 0:  
+                    resume_p = self._suspended_tasks[0]
+                    print(f'Resuming process: {resume_p}')
+                    resume_p.resume()
+                    self._running_tasks.append(psutil.Process(pid=resume_p.pid))
+                    self._suspended_tasks.remove(resume_p)
+            
             
             
             
@@ -106,18 +121,16 @@ class TaskProcessor(Thread):
                 self.max_gb = 60
                 self.max_mib = self.max_gb * 953.67431640625
             
-
+            time.sleep(1)
             
 
-            time.sleep(1)
 
-'''
-    def _process_suspended_tasks(self):
+    def _process_suspended_tasks(self):         
         """Resume processing of suspended tasks."""
         for p in self._suspended_tasks:
             print(f'\nResuming process: {p}')
             p.resume()
             p.wait()
-'''
+
 
 
