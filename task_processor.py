@@ -12,7 +12,7 @@ class TaskProcessor(Thread):
     tasks (processes). Suspends execution for tasks surpassing
     `max_mib` and completes them one by one, after behaving
     tasks have finished.
-    Adapted to suspend process with highest memory usage if total memory limit is exceeded and
+    Adapted to suspend process with lowest memory usage if total memory limit is exceeded and
     start suspended process as soon as another process finished.
     """
 
@@ -83,11 +83,11 @@ class TaskProcessor(Thread):
                     active_mems.append((p_mem, p))
             
             if total_mem > self.max_mib:    # 40GB
-                max_mem_p = max(active_mems)[1]
-                max_mem_p.suspend()
-                self._running_tasks.remove(max_mem_p)
-                self._suspended_tasks.append(max_mem_p)
-                print(f'Suspended process: {max_mem_p}')
+                min_mem_p = min(active_mems)[1]
+                min_mem_p.suspend()
+                self._running_tasks.remove(min_mem_p)
+                self._suspended_tasks.append(min_mem_p)
+                print(f'Suspended process: {min_mem_p}')
                     #if p.memory_info().rss / 2 ** 20 > self.max_mib:
                     #    p.suspend()
                     #    self._running_tasks.remove(p)
