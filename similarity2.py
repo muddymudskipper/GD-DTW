@@ -31,7 +31,9 @@ SR = 22050
 #TEMPDIR = DIR + 'temp/'
 
 
-MAX_MEM_GB = 50
+#MAX_MEM_GB = 50
+MIN_MEM = 60
+MAX_MEM = 70
 DATE = sys.argv[1]
 #DATE = '82-07-29'
 TEMPDIR = 'temp'
@@ -51,9 +53,14 @@ class gl():
 
 def loadRecordings():
     print('loading audio files')
-    folders = pickle.load(open('date_folder_dict.pickle', 'rb'))[DATE]
-    recordings = []
+
+    #folders = pickle.load(open('date_folder_dict.pickle', 'rb'))[DATE]
     #folders = [os.path.join(RECSDIR, d) for d in os.listdir(RECSDIR) if os.path.isdir(os.path.join(RECSDIR, d))]
+
+    
+    recordings = pickle.load(open('recordings.pickle', 'rb'))
+    '''
+    recordings = []
     for d in folders[:5]:
         print('loading files for', d.split('/')[-1])
         files = [os.path.join(d, f) for f in os.listdir(d) if f.lower().endswith(('flac', 'mp3', 'shn'))]
@@ -66,6 +73,10 @@ def loadRecordings():
         recordings.append(p)
     recordings = sorted(recordings, key=lambda x: combinedLength(x))
     # shared memory for each audio file
+
+    #pickle.dump(recordings, open('recordings.pickle', 'wb'))
+    '''
+
     for i, rec in enumerate(recordings):
         etree_number = etreeNumber(rec[0][0])
         for j, f in enumerate(rec):
@@ -239,22 +250,22 @@ def process(apairs, filenames2):
     #pool.close()
     #pool.join()
 
- 
+    '''
     qout_s = mp.Queue()
     tasks = [mp.Process(target=similarity, args=(a, qout_s)) for a in apairs]
-    tp = TaskProcessor(n_cores=THREADS_SIMILARITY, max_gb=MAX_MEM_GB, tasks=tasks)
+    tp = TaskProcessor(n_cores=THREADS_SIMILARITY, min_mem=MIN_MEM, max_mem=MAX_MEM, tasks=tasks)
     tp.start()
     tp.join()
     p = getQueue(qout_s)
     qout_s.close()
-
-
     unlinkShm(filenames2, 'hpcp')
+    '''
+    
+    
+    p = pickle.load(open('similaritymin_test.pickle', 'rb'))
+    #pickle.dump(p, open('similaritymin_test.pickle', 'wb'))
     
     res = processResult(p)
-    #res = pickle.load(open('similaritymin.pickle', 'rb'))
-    #pickle.dump(res, open('similaritymin_test.pickle', 'wb'))
-    #return
     print('calculating subsequence DTW paths')
 
     #pool = mp.Pool(THREADS_DTW)
@@ -265,7 +276,8 @@ def process(apairs, filenames2):
     
     qout_r = mp.Queue()
     tasks = [mp.Process(target=runScript, args=(r, qout_r)) for r in res]
-    tp = TaskProcessor(n_cores=THREADS_DTW, max_gb=MAX_MEM_GB, tasks=tasks)
+    #tp = TaskProcessor(n_cores=THREADS_DTW, max_gb=MAX_MEM_GB, tasks=tasks)
+    tp = TaskProcessor(n_cores=THREADS_DTW, min_mem=MIN_MEM, max_mem=MAX_MEM, tasks=tasks)
     tp.start()
     tp.join()
     p = getQueue(qout_r)
