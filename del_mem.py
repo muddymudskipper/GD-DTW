@@ -40,8 +40,8 @@ def deleteShms2():
             except: pass
 
 
-#deleteShms()
-deleteShms2()
+deleteShms()
+#deleteShms2()
 
 
 
