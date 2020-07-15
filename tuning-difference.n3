@@ -13,10 +13,10 @@
     ] ;
     vamp:parameter_binding [
         vamp:parameter [ vamp:identifier "maxduration" ] ;
-        vamp:value "300"^^xsd:float ;
+        vamp:value "0"^^xsd:float ;
     ] ;
     vamp:parameter_binding [
         vamp:parameter [ vamp:identifier "maxrange" ] ;
-        vamp:value "5"^^xsd:float ;
+        vamp:value "3"^^xsd:float ;
     ] ;
     vamp:output <http://vamp-plugins.org/rdf/plugins/tuning-difference#tuning-difference_output_cents> .

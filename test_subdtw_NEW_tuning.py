@@ -100,7 +100,8 @@ def resampleAudio(a, tuning=float(0)):
     if tuning != float(0): 
         ratio = 2**(-tuning / 1200) # -tuning because resampling of audio 1
         #ar = resample(a, ratio, 'sinc_best')
-        ar = resample(a, ratio, 'sinc_medium')
+        #ar = resample(a, ratio, 'sinc_medium')
+        ar = resample(a, ratio, 'sinc_fastest')
         return ar
     else:
         return a
@@ -174,7 +175,28 @@ def etreeNumber(e):
         except: pass
 
 
-def dtwstart(FILE1, FILE2, CHROMASHAPE2, DATE):
+def tuningstart(fp):
+    #fp.append(0)
+    #return fp
+
+    file1 = fp[0]
+    file2 = fp[1]
+    etree_number1 = etreeNumber(file1[0])
+    etree_number2 = etreeNumber(file2[0])
+    shmname1 = '{0}_{1}_audio'.format(etree_number1, file1[1])
+    shm1 = shared_memory.SharedMemory(name=shmname1)
+    file1_buf = np.ndarray(file1[2], dtype=np.float32, buffer=shm1.buf)
+    shmname2 = '{0}_{1}_audio'.format(etree_number2, file2[1])
+    shm2 = shared_memory.SharedMemory(name=shmname2)
+    file2_buf = np.ndarray(file2[2], dtype=np.float32, buffer=shm2.buf)
+    tuning = tuningFrequency(file1_buf, file2_buf)
+    fp.append(tuning)
+    return fp
+
+
+
+
+def dtwstart(FILE1, FILE2, CHROMASHAPE2, DATE, tuning):
     filename1 = FILE1[0]
     filename2 = FILE2[0]
     
@@ -191,8 +213,7 @@ def dtwstart(FILE1, FILE2, CHROMASHAPE2, DATE):
     shm2 = shared_memory.SharedMemory(name=shmname2)
     file2_buf = np.ndarray(FILE2[2], dtype=np.float32, buffer=shm2.buf)
     
-
-    tuning = tuningFrequency(file1_buf, file2_buf)
+    #tuning = tuningFrequency(file1_buf, file2_buf)
 
     file1_resampled = resampleAudio(file1_buf, tuning)
     X = getChroma(file1_resampled)
