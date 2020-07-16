@@ -19,8 +19,9 @@ from tqdm import tqdm
 from subprocess import Popen, DEVNULL, PIPE
 import pickle
 from multiprocessing.managers import SharedMemoryManager
-from math import ceil, floor
-from test_subdtw_NEW_tuning import dtwstart, tuningstart
+from math import ceil, log2
+from test_subdtw_NEW_tuning import dtwstart#, tuningDiffStart
+import vamp
 
 
 #RECSDIR = '/Volumes/Beratight2/SDTW/82-07-29'
@@ -40,7 +41,7 @@ DSTDIR = os.path.join('results', DATE)
 CPUS = 24
 THREADS_LOADING = 24
 THREADS_CHROMA = 24
-THREADS_SIMILARITY = 24
+THREADS_SIMILARITY = 12
 #THREADS_DTW = 10
 THREADS_TUNING = 24
 
@@ -190,7 +191,7 @@ def groupPairsBySize(res):
     resdict = {}
     groups = []
     for r in res:
-        cpus = floor(avail_mem / r[4])
+        cpus = int(avail_mem / r[4])
         if cpus == 0: cpus = 1
         if cpus > CPUS: cpus = CPUS
         if cpus not in resdict: 
@@ -271,10 +272,10 @@ def getChromas(fs):
     p.sort()
     chroma_shapes = {}
     for c in p:
-        gl.shms.append(shared_memory.SharedMemory(create=True, size=c[2].nbytes, name='{0}_{1}_chroma'.format(etreeNumber(c[0]), c[1])))
-        s = np.ndarray(c[2].shape, dtype=np.float32, buffer=gl.shms[-1].buf)
-        s[:] = c[2][:]   
-        chroma_shapes[c[0]] = (c[1], c[2].shape)
+        gl.shms.append(shared_memory.SharedMemory(create=True, size=c[2][0].nbytes, name='{0}_{1}_chroma'.format(etreeNumber(c[0]), c[1])))
+        s = np.ndarray(c[2][0].shape, dtype=np.float32, buffer=gl.shms[-1].buf)
+        s[:] = c[2][0][:]   
+        chroma_shapes[c[0]] = (c[1], (c[2][0].shape, c[2][1]))   # c[2][1] = tuning_frac
     return chroma_shapes
 
 
@@ -282,9 +283,55 @@ def getChroma(f):
     shmname = '{0}_{1}_audio'.format(etreeNumber(f[0]), f[1])
     shm = shared_memory.SharedMemory(name=shmname)
     a = np.ndarray(f[2], dtype=np.float32, buffer=shm.buf)
-    c = chroma_cens(y=a, sr=SR, hop_length=DTWFRAMESIZE, win_len_smooth=21)
+    tuning_frac = tuningFreq(a)
+    c = chroma_cens(y=a, sr=SR, hop_length=DTWFRAMESIZE, win_len_smooth=21, tuning=tuning_frac)
     #print(f[0])
-    return (f[0], f[1], c)  # return filename, index, chroma
+    return (f[0], f[1], (c, tuning_frac))  # return filename, index, (chroma, tuning_frac)
+
+
+def tuningFreq(b):
+    freq = vamp.collect(b, SR, 'nnls-chroma:tuning', output="tuning")
+    freq = freq['list'][0]['values'][0]
+    frac = 12 * log2(freq / 440)
+    return frac 
+
+
+def tuningDiffStart(fp):
+    #fp.append(0)
+    #return fp
+    file1 = fp[0]
+    file2 = fp[1]
+    etree_number1 = etreeNumber(file1[0])
+    etree_number2 = etreeNumber(file2[0])
+    shmname1 = '{0}_{1}_audio'.format(etree_number1, file1[1])
+    shm1 = shared_memory.SharedMemory(name=shmname1)
+    file1_buf = np.ndarray(file1[2], dtype=np.float32, buffer=shm1.buf)
+    shmname2 = '{0}_{1}_audio'.format(etree_number2, file2[1])
+    shm2 = shared_memory.SharedMemory(name=shmname2)
+    file2_buf = np.ndarray(file2[2], dtype=np.float32, buffer=shm2.buf)
+    tuning_diff = tuningDiff(file1_buf, file2_buf)
+    fp.append(tuning_diff)
+    return fp
+
+
+def tuningDiff(a, b):
+    two_channels = makeTwoChannels(a,b) 
+    diff = vamp.collect(two_channels, SR, "tuning-difference:tuning-difference", output="cents", parameters={'maxrange': 4})
+    diff = diff['list'][0]['values'][0]
+    if diff > 300: diff = 0     # if more than 3 semitones difference there might be something wrong
+    #print('diff = ', float(diff))
+    return float(diff) 
+
+
+def makeTwoChannels(a, b):
+    if len(a) > len(b):
+        pad = np.pad(b, [0,len(a)-len(b)])
+        return np.array([a, pad])
+    elif len(b) > len(a):
+        pad = np.pad(a, [0,len(b)-len(a)])
+        return np.array([pad, b])
+    else:
+        return np.array([a, b])
 
 
 def process(apairs, filenames2):
@@ -332,26 +379,24 @@ def estimate_memory(res):
     mem_estims = []
     print('getting tuning differences')
     pool = mp.Pool(THREADS_TUNING)
-    p = list(tqdm(pool.imap(tuningstart, res), total=len(res)))
-    #tqdmMap(tuningstart, res, THREADS_TUNING)
+    p = list(tqdm(pool.imap(tuningDiffStart, res), total=len(res)))
     pool.close()
     pool.join()
 
     for r in p:
-        #print(r)
         file_len1 = r[0][2][0]
         ratio = 2**(-r[3] / 1200)
         file_len1 *= ratio
     
         chroma_len1 = ceil(ceil(file_len1) / DTWFRAMESIZE)
-        chroma_len2 = r[2][1]
+        chroma_len2 = r[2][0][1]
         msize = 3 * chroma_len1 * chroma_len2
         psize = min([chroma_len1, chroma_len2]) * 2
         res = (msize + psize) * 8 / 2**30
         r.append(res)
     
     return p
-
+    sys.exit()
 
 def etreeNumber(e):
     for j in e.split('/')[-2].split(('.')):

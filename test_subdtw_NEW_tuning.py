@@ -18,6 +18,9 @@ np.seterr(divide='ignore', invalid='ignore')   # stats division by zero warning
 
 SR = 22050
 DTWFRAMESIZE = 512
+SEGMENT_LENGTH = 15  # length for wp segments in linear regression 
+LINGRESSMIN = 0.94
+LINGRESSMAX = 1.04
 
 #DIR = '/Volumes/Journal/Documents/OneDrive/OneDrive - Queen Mary, University of London/projects/SDTW/'
 #TEMP = DIR + 'temp/'
@@ -42,19 +45,18 @@ class gl():
     dstdir = None
 
 
-def libDtw(X, Y, tuning=float(0)):
+def libDtw(X, Y, tuning_diff=0):
     #sigma = np.array([[1, 1], [1, 2], [2, 1]])
-    D, wp = librosa.sequence.dtw(X, Y, subseq=True)
-    wp = processPath(wp, tuning)
+    D, wp = librosa.sequence.dtw(X, Y, subseq=True, global_constraints=True)
+    wp = processPath(wp, tuning_diff)
     #with open("warping_path.txt", "w") as text_file:
     #    for w in wp: text_file.write(str(w) + '\n')
     return wp
     
 
-
-def processPath(wp, tuning):
+def processPath(wp, tuning_diff):
     wp = wp / SR * DTWFRAMESIZE
-    if tuning != float(0): wp = scaleDtw(wp, tuning)
+    if tuning_diff != float(0): wp = scaleDtw(wp, tuning_diff)
     wp = wp[wp[:,0].argsort()]
     wp = removeNonlinear(wp)
     #wp = wp.tolist()
@@ -62,21 +64,19 @@ def processPath(wp, tuning):
 
 
 def removeNonlinear(wp):
-    segment_length = 10   # segment length in seconds
-    slen = segment_length * SR / DTWFRAMESIZE
+    slen = SEGMENT_LENGTH * SR / DTWFRAMESIZE
     number_of_chunks = len(wp) / slen
     chunks = np.array_split(wp, number_of_chunks)  # split to chunks of roughly same length
     wp_plot = []
     for chunk in chunks:
         slope, intercept, r_value = stats.linregress(chunk)[:3]
-        if 1.04 > round(slope, 2) > 0.96:
+        if LINGRESSMIN > round(slope, 2) > LINGRESSMAX:
             wp_plot.append(chunk)
     if len(wp_plot) == 1: wp_plot = []  # testing: omit if only one chunk is aligned to avoid false positives
     return wp_plot
 
 
 def _removeNonlinear(wp):   # testing
-    segment_length = 10   # segment length in seconds
     frames_per_second = int(SR / DTWFRAMESIZE)
     len_ceil_seconds = ceil(len(wp) / frames_per_second)
     wp_plot = []
@@ -91,14 +91,14 @@ def _removeNonlinear(wp):   # testing
     return wp_plot
 
 
-def scaleDtw(wp, t):
-    wp[:, 0] *= 2**(t / 1200)
+def scaleDtw(wp, tuning_diff):
+    wp[:, 0] *= 2**(tuning_diff / 1200)
     return wp
 
 
-def resampleAudio(a, tuning=float(0)):
-    if tuning != float(0): 
-        ratio = 2**(-tuning / 1200) # -tuning because resampling of audio 1
+def resampleAudio(a, tuning_diff=0):
+    if tuning_diff != 0: 
+        ratio = 2**(-tuning_diff / 1200) # -tuning because resampling of audio 1
         #ar = resample(a, ratio, 'sinc_best')
         #ar = resample(a, ratio, 'sinc_medium')
         ar = resample(a, ratio, 'sinc_fastest')
@@ -107,32 +107,12 @@ def resampleAudio(a, tuning=float(0)):
         return a
 
 
-def getChroma(a):
+def getChroma(a, tuning_frac=None):
     # tuning Deviation (in fractions of a CQT bin) from A440 tuning
-    return librosa.feature.chroma_cens(y=a, sr=SR, hop_length=DTWFRAMESIZE, win_len_smooth=21)
+    return librosa.feature.chroma_cens(y=a, sr=SR, hop_length=DTWFRAMESIZE, win_len_smooth=21, tuning=tuning_frac)
 
 
-def tuningFrequency(a, b):
-    two_channels = makeTwoChannels(a,b) 
-    diff = vamp.collect(two_channels, SR, "tuning-difference:tuning-difference", output="cents", parameters={'maxduration': 300})
-    diff = diff['list'][0]['values'][0]
-
-    #print('diff = ', float(diff))
-    return float(diff) 
-
-
-def makeTwoChannels(a, b):
-    if len(a) > len(b):
-        pad = np.pad(b, [0,len(a)-len(b)])
-        return np.array([a, pad])
-    elif len(b) > len(a):
-        pad = np.pad(a, [0,len(b)-len(a)])
-        return np.array([pad, b])
-    else:
-        return np.array([a, b])
-
-
-def plotFigure(ws, l1, l2, file1, file2, tuning):
+def plotFigure(ws, l1, l2, file1, file2, tuning_diff):
     fsplit1 = file1.split('/')
     #fname1 = '/'.join(fsplit1[-2:])
     fsplit2 = file2.split('/')
@@ -145,7 +125,7 @@ def plotFigure(ws, l1, l2, file1, file2, tuning):
         for d in ws[1:]: 
             dtw = np.concatenate((dtw, d), axis=0)
     dtw = dtw.tolist()
-    j = { 'dtw': dtw, 'filenames': [file1, file2], 'lengths': [l1/SR, l2/SR], 'tuning': tuning }
+    j = { 'dtw': dtw, 'filenames': [file1, file2], 'lengths': [l1/SR, l2/SR], 'tuning_diff': tuning_diff }
     json.dump(j, open(jsonname, 'w', encoding='utf-8'), sort_keys=True)
 
     p = plt.figure()
@@ -175,28 +155,10 @@ def etreeNumber(e):
         except: pass
 
 
-def tuningstart(fp):
-    #fp.append(0)
-    #return fp
+def dtwstart(FILE1, FILE2, CHROMA2, DATE, TUNING_DIFF):
+    chroma_shape2 = CHROMA2[0]
+    tuning_frac2 = CHROMA2[1]
 
-    file1 = fp[0]
-    file2 = fp[1]
-    etree_number1 = etreeNumber(file1[0])
-    etree_number2 = etreeNumber(file2[0])
-    shmname1 = '{0}_{1}_audio'.format(etree_number1, file1[1])
-    shm1 = shared_memory.SharedMemory(name=shmname1)
-    file1_buf = np.ndarray(file1[2], dtype=np.float32, buffer=shm1.buf)
-    shmname2 = '{0}_{1}_audio'.format(etree_number2, file2[1])
-    shm2 = shared_memory.SharedMemory(name=shmname2)
-    file2_buf = np.ndarray(file2[2], dtype=np.float32, buffer=shm2.buf)
-    tuning = tuningFrequency(file1_buf, file2_buf)
-    fp.append(tuning)
-    return fp
-
-
-
-
-def dtwstart(FILE1, FILE2, CHROMASHAPE2, DATE, tuning):
     filename1 = FILE1[0]
     filename2 = FILE2[0]
     
@@ -213,20 +175,20 @@ def dtwstart(FILE1, FILE2, CHROMASHAPE2, DATE, tuning):
     shm2 = shared_memory.SharedMemory(name=shmname2)
     file2_buf = np.ndarray(FILE2[2], dtype=np.float32, buffer=shm2.buf)
     
-    #tuning = tuningFrequency(file1_buf, file2_buf)
+    #tuning_diff = tuningDiff(file1_buf, file2_buf)
 
-    file1_resampled = resampleAudio(file1_buf, tuning)
-    X = getChroma(file1_resampled)
+    file1_resampled = resampleAudio(file1_buf, TUNING_DIFF)
+    X = getChroma(file1_resampled, tuning_frac2)
 
     shmnameY = '{0}_{1}_chroma'.format(etree_number2, FILE2[1])
     shmY = shared_memory.SharedMemory(name=shmnameY)
-    Y = np.ndarray(CHROMASHAPE2, dtype=np.float32, buffer=shmY.buf)
+    Y = np.ndarray(chroma_shape2, dtype=np.float32, buffer=shmY.buf)
 
-    wp_plot = libDtw(X, Y, tuning)
+    wp_plot = libDtw(X, Y)
     #print(wp_plot)
 
     if len(wp_plot) > 0:
-        plotFigure(wp_plot, FILE1[2][0], FILE2[2][0], filename1, filename2, tuning)
+        plotFigure(wp_plot, FILE1[2][0], FILE2[2][0], filename1, filename2, TUNING_DIFF)
         resfile = filename1
         dtw = wp_plot[0]
 
