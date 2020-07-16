@@ -20,9 +20,10 @@ from subprocess import Popen, DEVNULL, PIPE
 import pickle
 from multiprocessing.managers import SharedMemoryManager
 from math import ceil, log2
-from test_subdtw_NEW_tuning import dtwstart#, tuningDiffStart
 import vamp
 
+from test_subdtw_NEW_tuning import dtwstart
+from make_folder_dict import dateDict
 
 #RECSDIR = '/Volumes/Beratight2/SDTW/82-07-29'
 #DIR = '/Volumes/Journal/Documents/OneDrive/OneDrive - Queen Mary, University of London/projects/SDTW/'
@@ -49,6 +50,7 @@ SR = 22050
 DTWFRAMESIZE = 512
 
 
+
 class gl():
     shms = []
 
@@ -56,11 +58,12 @@ class gl():
 def loadRecordings():
     print('loading audio files')
 
-    folders = pickle.load(open('date_folder_dict.pickle', 'rb'))[DATE]
+    #folders = pickle.load(open('date_folder_dict.pickle', 'rb'))[DATE]
     #folders = [os.path.join(RECSDIR, d) for d in os.listdir(RECSDIR) if os.path.isdir(os.path.join(RECSDIR, d))]
 
     #recordings = pickle.load(open('recordings.pickle', 'rb'))
-    
+    folders = dateDict()[DATE]
+
     recordings = []
     for d in folders:
         print('loading files for', d.split('/')[-1])
