@@ -396,7 +396,7 @@ def estimate_memory(res):
         r.append(res)
     
     return p
-    sys.exit()
+
 
 def etreeNumber(e):
     for j in e.split('/')[-2].split(('.')):
