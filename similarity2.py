@@ -19,7 +19,8 @@ from tqdm import tqdm
 from subprocess import Popen, DEVNULL, PIPE
 import pickle
 from multiprocessing.managers import SharedMemoryManager
-from math import ceil, log2
+from math import ceil, floor, log2
+from random import shuffle
 import vamp
 
 from test_subdtw_NEW_tuning import dtwstart
@@ -192,14 +193,17 @@ def groupPairsBySize(res):
     res = sorted(res, key=lambda x: x[4], reverse=True)
     total = len(res)
     resdict = {}
-    groups = []
     for r in res:
-        cpus = int(avail_mem / r[4])
-        if cpus == 0: cpus = 1
-        if cpus > CPUS: cpus = CPUS
+        #cpus = int(avail_mem / r[4])
+        #if cpus == 0: cpus = 1
+        cpus = avail_mem / r[4]
+        if cpus < 1: 
+            cpus = 1
+        else:
+            cpus = normal_round(cpus + (0.2 * cpus))
+            if cpus > CPUS: cpus = CPUS
         if cpus not in resdict: 
             resdict[cpus] = []
-            groups.append(cpus)
         resdict[cpus].append(r)
 
     reslist = sorted([(k, v) for k, v in resdict.items()])  # [0] = cpus, [1] = audiopairs
@@ -215,11 +219,16 @@ def groupPairsBySize(res):
             if not moved: break
 
     reslist = list(filter(lambda x: len(x[1]) > 0, reslist))
+    [shuffle(i[1]) for i in reslist[1:]]
+
     #json.dump(reslist, open('cpus3.json', 'w', encoding='utf-8'), sort_keys=True)
     return reslist
 
-    
 
+def normal_round(n):
+    if n - floor(n) < 0.5:
+        return floor(n)
+    return ceil(n)
 
 
 def runScript(f):
@@ -360,11 +369,11 @@ def process(apairs, filenames2):
     p = []
     for i, e in enumerate(res):
         le = len(e[1])
-        print(f'{i+1}/{le} ({e[0]} CPUs) [total: {count}/{total}]')
+        print(f'{i+1}/{len(res)} ({e[0]} CPUs) [total: {count}/{total}]')
         threads = e[0]
         if threads > le: threads = le
         pool = mp.Pool(threads)
-        q = list(tqdm(pool.imap(runScript, e[1]), total=len(e[1])))
+        q = list(tqdm(pool.imap(runScript, e[1]), total=le))
         pool.close()
         pool.join()
         p += q
