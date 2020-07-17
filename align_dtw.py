@@ -404,7 +404,7 @@ def estimate_memory(res):
         chroma_len2 = r[2][0][1]
         msize = 3 * chroma_len1 * chroma_len2
         psize = min([chroma_len1, chroma_len2]) * 2
-        res = (msize + psize) * 8 / 2**30
+        res = (msize + psize) * 8 * B_TO_GB
         r.append(res)
     
     return p
