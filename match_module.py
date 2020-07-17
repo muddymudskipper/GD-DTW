@@ -60,7 +60,7 @@ def match(X, Y, tuning=440, tuning_diff=0):
     tuning = float(tuning)
     #print(tuning)
     chns, swap = makeTwoChannels(X, Y)
-    p = vamp.collect(chns, SR, 'match-vamp-plugin:match-subsequence', output="path", parameters={'freq1': tuning, 'freq2': tuning, 'zonewidth': 60})
+    p = vamp.collect(chns, SR, 'match-vamp-plugin:match-subsequence', output="path", parameters={'freq1': tuning, 'freq2': tuning, 'zonewidth': 10})
     wp = []
     for i in p['list']:
         if swap:
@@ -98,7 +98,10 @@ def removeNonlinear(wp):
     slen = SEGMENT_LENGTH / MATCH_INCREMENT
 
     number_of_chunks = len(wp) / slen
-    chunks = np.array_split(wp, number_of_chunks)  # split to chunks of roughly same length
+    try:
+        chunks = np.array_split(wp, number_of_chunks)  # split to chunks of roughly same length, ValueError: number sections must be larger than 0. (?)
+    except:
+        return []
     wp_plot = []
     for chunk in chunks:
         slope, intercept, r_value = stats.linregress(chunk)[:3]
