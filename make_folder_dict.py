@@ -17,10 +17,10 @@ replace = {
 
 ignore = ['vobf', 'dvda', 'dvdf', 'sirmickflac1648', 'fkac16', 'na', '127416', '127417', '127418', 'chuckm', '127360']
 
-DIRS = [os.path.join(SBDPATH, d) for d in os.listdir(SBDPATH) if os.path.isdir(os.path.join(SBDPATH, d))] + [os.path.join(LMAPATH, d) for d in os.listdir(LMAPATH) if os.path.isdir(os.path.join(LMAPATH, d))]
-
 
 def dateDict():
+    DIRS = [os.path.join(SBDPATH, d) for d in os.listdir(SBDPATH) if os.path.isdir(os.path.join(SBDPATH, d))] + [os.path.join(LMAPATH, d) for d in os.listdir(LMAPATH) if os.path.isdir(os.path.join(LMAPATH, d))]
+
     datedict = {}
 
     for d in DIRS:
@@ -60,5 +60,6 @@ def dateDict():
         except: pass
     
     return newdict
+
 
 

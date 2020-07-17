@@ -61,18 +61,18 @@ class gl():
 def loadRecordings():
     print('loading audio files')
 
-    folders = pickle.load(open('date_folder_dict.pickle', 'rb'))[DATE]
+    #folders = pickle.load(open('date_folder_dict.pickle', 'rb'))[DATE]
     #folders = [os.path.join(RECSDIR, d) for d in os.listdir(RECSDIR) if os.path.isdir(os.path.join(RECSDIR, d))]
 
     #recordings = pickle.load(open('recordings.pickle', 'rb'))
-    #folders = dateDict()[DATE]
+    folders = dateDict()[DATE]
 
     recordings = []
-    for d in folders[:2]:
+    for d in folders:
         print('loading files for', d.split('/')[-1])
         files = [os.path.join(d, f) for f in os.listdir(d) if f.lower().endswith(('flac', 'mp3', 'shn'))]
         pool = mp.Pool(THREADS_LOADING)
-        p = list(tqdm(pool.imap(loadFiles, files[:2]), total=len(files[:2])))
+        p = list(tqdm(pool.imap(loadFiles, files), total=len(files)))
         pool.close()
         pool.join()
         p = list(filter(lambda x: x != None, p)) # remove None type for unloadable files

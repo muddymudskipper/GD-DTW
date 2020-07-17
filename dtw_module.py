@@ -18,7 +18,7 @@ np.seterr(divide='ignore', invalid='ignore')   # stats division by zero warning
 
 SR = 22050
 DTWFRAMESIZE = 512
-SEGMENT_LENGTH = 15  # length for wp segments in linear regression 
+SEGMENT_LENGTH = 10  # length for wp segments in linear regression 
 LINREGRESS_MIN = 0.94
 LINREGRESS_MAX = 1.04
 
@@ -193,5 +193,10 @@ def dtwstart(FILE1, FILE2, CHROMA2, DATE, TUNING_DIFF):
     return resfile
 
 
+def main():
+    pass
+
+if __name__ == "__main__":
+    main()
 
 

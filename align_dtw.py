@@ -23,7 +23,7 @@ from math import ceil, floor, log2
 from random import shuffle
 import vamp
 
-from test_subdtw_NEW_tuning import dtwstart
+from dtw_module import dtwstart
 from make_folder_dict import dateDict
 
 #RECSDIR = '/Volumes/Beratight2/SDTW/82-07-29'
@@ -116,7 +116,7 @@ def loadFiles(f):
         fs = estd.MonoLoader(filename=_f, sampleRate=SR)()
         if f.endswith('.shn'): os.remove(_f)
         hpc = hpcpgram(fs, sampleRate=SR)
-        #print(f)
+        print(f)
         return (f, fs, hpc)
     except: pass
     
