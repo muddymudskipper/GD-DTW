@@ -19,8 +19,8 @@ np.seterr(divide='ignore', invalid='ignore')   # stats division by zero warning
 SR = 22050
 DTWFRAMESIZE = 512
 SEGMENT_LENGTH = 15  # length for wp segments in linear regression 
-LINGRESSMIN = 0.94
-LINGRESSMAX = 1.04
+LINREGRESS_MIN = 0.94
+LINREGRESS_MAX = 1.04
 
 #DIR = '/Volumes/Journal/Documents/OneDrive/OneDrive - Queen Mary, University of London/projects/SDTW/'
 #TEMP = DIR + 'temp/'
@@ -70,7 +70,7 @@ def removeNonlinear(wp):
     wp_plot = []
     for chunk in chunks:
         slope, intercept, r_value = stats.linregress(chunk)[:3]
-        if LINGRESSMIN > round(slope, 2) > LINGRESSMAX:
+        if LINREGRESS_MAX > round(slope, 2) > LINREGRESS_MIN:
             wp_plot.append(chunk)
     if len(wp_plot) == 1: wp_plot = []  # testing: omit if only one chunk is aligned to avoid false positives
     return wp_plot
@@ -135,7 +135,6 @@ def plotFigure(ws, l1, l2, file1, file2, tuning_diff):
     plt.plot(0, 0, color='w')  # include full audio length in plot
     plt.plot(l1/SR, l2/SR, color='w')
     plt.tight_layout()
-    #print(pdfname)
     p.savefig(pdfname, bbox_inches='tight')
     plt.close(p)
 
@@ -185,7 +184,6 @@ def dtwstart(FILE1, FILE2, CHROMA2, DATE, TUNING_DIFF):
     Y = np.ndarray(chroma_shape2, dtype=np.float32, buffer=shmY.buf)
 
     wp_plot = libDtw(X, Y)
-    #print(wp_plot)
 
     if len(wp_plot) > 0:
         plotFigure(wp_plot, FILE1[2][0], FILE2[2][0], filename1, filename2, TUNING_DIFF)
