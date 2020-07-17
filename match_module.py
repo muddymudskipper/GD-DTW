@@ -60,7 +60,7 @@ def match(X, Y, tuning=440, tuning_diff=0):
     tuning = float(tuning)
     #print(tuning)
     chns, swap = makeTwoChannels(X, Y)
-    p = vamp.collect(chns, SR, 'match-vamp-plugin:match-subsequence', output="path", parameters={'freq1': tuning, 'freq2': tuning})
+    p = vamp.collect(chns, SR, 'match-vamp-plugin:match-subsequence', output="path", parameters={'freq1': tuning, 'freq2': tuning, 'zonewidth': 60})
     wp = []
     for i in p['list']:
         if swap:
