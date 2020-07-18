@@ -107,7 +107,7 @@ def removeNonlinear(wp):
         slope, intercept, r_value = stats.linregress(chunk)[:3]
         if LINREGRESS_MAX < round(slope, 2) > LINREGRESS_MIN:
             wp_plot.append(chunk)
-    if len(wp_plot) == 1: 
+    if len(wp_plot) <= 1: 
         wp_plot = []  # testing: omit if only one chunk is aligned to avoid false positives
     else:
         w_combine = wp_plot[0]
