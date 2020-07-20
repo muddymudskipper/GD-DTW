@@ -163,10 +163,10 @@ def plotFigure(ws, wp, l1, l2, file1, file2, tuning_diff):
     #fname1 = '/'.join(fsplit1[-2:])
     fsplit2 = file2.split('/')
     #fname2 = '/'.join(fsplit2[-2:])
-    pdfname = os.path.join(gl.dstdir, '{0}_{1}.png'.format(fsplit1[-1], fsplit2[-1]))
-    pdfname2 = os.path.join(gl.dstdir, '{0}_{1}_full.png'.format(fsplit1[-1], fsplit2[-1]))
+    pdfname = os.path.join(gl.dstdir, '{0}__{1}.png'.format(fsplit1[-1], fsplit2[-1]))
+    pdfname2 = os.path.join(gl.dstdir, '{0}__{1}_full.png'.format(fsplit1[-1], fsplit2[-1]))
 
-    jsonname = os.path.join(gl.dstdir, '{0}_{1}.json'.format(fsplit1[-1], fsplit2[-1]))
+    jsonname = os.path.join(gl.dstdir, '{0}__{1}.json'.format(fsplit1[-1], fsplit2[-1]))
     dtw = ws[0]
     if len(ws) > 1:
         for d in ws[1:]: 
