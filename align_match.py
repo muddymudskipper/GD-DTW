@@ -167,7 +167,11 @@ def processResult(p):
         if i[0] not in pdict: pdict[i[0]] = []
         pdict[i[0]].append([i[2], i[1]])
     for k, v in pdict.items():
-        smin = sorted(v)[:NUM_SIMILAR]        # store filenames with min distances
+        #smin = sorted(v)[:NUM_SIMILAR]        # store filenames with min distances
+        sort_sim = sorted(v)
+        smin = [sort_sim[0]]
+        if sort_sim[1] <= sort_sim[0]:
+            smin.append(sort_sim[1])
         #smin = sorted(v)[:1]        # for testing
         for i in smin: res.append([k] + [i[1]]) # store recording pairs with all info
 

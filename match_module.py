@@ -19,8 +19,8 @@ np.seterr(divide='ignore', invalid='ignore')   # stats division by zero warning
 SR = 22050
 DTWFRAMESIZE = 512
 SEGMENT_LENGTH = 15  # length for wp segments in linear regression 
-LINREGRESS_MIN = 0.97
-LINREGRESS_MAX = 1.03
+LINREGRESS_MIN = 0.96
+LINREGRESS_MAX = 1.04
 
 LINREGRESS2_MIN = 0.9
 LINREGRESS2_MAX = 1.1
