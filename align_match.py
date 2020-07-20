@@ -170,7 +170,7 @@ def processResult(p):
         #smin = sorted(v)[:NUM_SIMILAR]        # store filenames with min distances
         sort_sim = sorted(v)
         smin = [sort_sim[0]]
-        if sort_sim[1] <= sort_sim[0]:
+        if sort_sim[1] <= 2 * sort_sim[0]:
             smin.append(sort_sim[1])
         #smin = sorted(v)[:1]        # for testing
         for i in smin: res.append([k] + [i[1]]) # store recording pairs with all info
