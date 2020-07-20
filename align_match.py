@@ -47,11 +47,13 @@ THREADS_LOADING = 24
 THREADS_SIMILARITY = 12
 #THREADS_DTW = 10
 THREADS_TUNING = 24
+THREADS_TUNINGDIFF = 24
 THREADS_MATCH = 24
 
 SR = 22050
 DTWFRAMESIZE = 512
 
+NUM_SIMILAR = 1
 
 
 class gl():
@@ -71,7 +73,7 @@ def loadRecordings():
     for d in folders:
         print('loading files for', d.split('/')[-1])
         files = [os.path.join(d, f) for f in os.listdir(d) if f.lower().endswith(('flac', 'mp3', 'shn'))]
-        pool = mp.Pool(THREADS_LOADING)
+        pool = mp.Pool(nThreads(files, THREADS_LOADING))
         p = list(tqdm(pool.imap(loadFiles, files), total=len(files)))
         pool.close()
         pool.join()
@@ -165,7 +167,7 @@ def processResult(p):
         if i[0] not in pdict: pdict[i[0]] = []
         pdict[i[0]].append([i[2], i[1]])
     for k, v in pdict.items():
-        smin = sorted(v)[:2]        # store first 2 min distances
+        smin = sorted(v)[:NUM_SIMILAR]        # store filenames with min distances
         #smin = sorted(v)[:1]        # for testing
         for i in smin: res.append([k] + [i[1]]) # store recording pairs with all info
 
@@ -179,7 +181,7 @@ def processResult(p):
     # append tuning freq
     for i in res: i.append(tunings[i[1][0]][1])
     print('getting tuning differences')
-    pool = mp.Pool(THREADS_TUNING)
+    pool = mp.Pool(nThreads(res, THREADS_TUNINGDIFF))
     res = list(tqdm(pool.imap(tuningDiffStart, res), total=len(res)))
     pool.close()
     pool.join()
@@ -200,7 +202,7 @@ def processResult(p):
 
 def getTunings(fs):
     print('getting tuning frequencies')
-    pool = mp.Pool(THREADS_TUNING)
+    pool = mp.Pool(nThreads(fs, THREADS_TUNING))
     p = list(tqdm(pool.imap(getTuning, fs), total=len(fs)))
     pool.close()
     pool.join()
@@ -286,18 +288,17 @@ def start():
 
     matched_files = []
     for i in range(1,len(filenames)):
-        audiopairs = []
         print('Run {0} of {1}'.format(i, len(filenames)-1))
+        audiopairs = []
         for n in range(0, len(filenames)-i):
             apairs = list(itertools.product(filenames[n], filenames[-i]))
             audiopairs += apairs
             audiopairs = list(filter(lambda x: x[0][0] not in matched_files, audiopairs))
         #for p in audiopairs: print(p)
-        if len(audiopairs) > 0: matched_files += process(audiopairs, filenames[-i])
+        if len(audiopairs) > 0: matched_files += process(audiopairs, filenames[-i], i)
         else: 
             print('finished')
             break
-        
         #break
 
 def unlinkShm(fs, ftype):
@@ -315,7 +316,7 @@ def unlinkShm(fs, ftype):
 
 def getChromas(fs):
     print('getting chromas')
-    pool = mp.Pool(THREADS_CHROMA)
+    pool = mp.Pool(nThreads(fs, THREADS_CHROMA))
     #p = pool.map(getChroma, fs, chunksize=1)
     p = list(tqdm(pool.imap(getChroma, fs), total=len(fs)))
     pool.close()
@@ -385,20 +386,29 @@ def makeTwoChannels(a, b):
         return np.array([a, b])
 
 
-def process(apairs, filenames2):
+def nThreads(a, t):
+    return min(len(a), t)
+
+
+def process(apairs, filenames2, run):
     print('measuring pairwise similarity')
     
-    pool = mp.Pool(THREADS_SIMILARITY)
-    p = list(tqdm(pool.imap(similarity, apairs), total=len(apairs)))
-    pool.close()
-    pool.join()
-    
-    #p = pickle.load(open('similaritymin_test.pickle', 'rb'))
-    #pickle.dump(p, open('similaritymin_test.pickle', 'wb'))
+    if run == -1:
+        res = p = pickle.load(open('processed_results1.pickle', 'rb'))
+        #pickle.dump(res, open('processed_results1.pickle', 'wb'))
+    else:
+        pool = mp.Pool(nThreads(apairs, THREADS_SIMILARITY))
+        p = list(tqdm(pool.imap(similarity, apairs), total=len(apairs)))
+        pool.close()
+        pool.join()
+        #pickle.dump(p, open('processed_results1.pickle', 'wb'))
     
     res = processResult(p)
+
+  
+       
     print('calculating match alignment')
-    pool = mp.Pool(THREADS_MATCH)
+    pool = mp.Pool(nThreads(res, THREADS_MATCH))
     p = list(tqdm(pool.imap(runScript, res), total=len(res)))
     pool.close()
     pool.join()
@@ -430,7 +440,7 @@ def process(apairs, filenames2):
 def estimate_memory(res):
     mem_estims = []
     print('getting tuning differences')
-    pool = mp.Pool(THREADS_TUNING)
+    pool = mp.Pool(nThreads(res, THREADS_TUNING))
     p = list(tqdm(pool.imap(tuningDiffStart, res), total=len(res)))
     pool.close()
     pool.join()

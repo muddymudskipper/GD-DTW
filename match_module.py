@@ -18,9 +18,18 @@ np.seterr(divide='ignore', invalid='ignore')   # stats division by zero warning
 
 SR = 22050
 DTWFRAMESIZE = 512
-SEGMENT_LENGTH = 10  # length for wp segments in linear regression 
-LINREGRESS_MIN = 0.94
-LINREGRESS_MAX = 1.04
+SEGMENT_LENGTH = 15  # length for wp segments in linear regression 
+LINREGRESS_MIN = 0.97
+LINREGRESS_MAX = 1.03
+
+LINREGRESS2_MIN = 0.9
+LINREGRESS2_MAX = 1.1
+
+
+
+R2_1 = 0.95
+R2_2 = 0.9
+MIN_TRUE = 2
 
 MATCH_INCREMENT = 0.02
 
@@ -67,9 +76,9 @@ def match(X, Y, tuning=440, tuning_diff=0):
             wp.append([float(i['values'][0]), float(i['timestamp'])])
         else:
             wp.append([float(i['timestamp']), float(i['values'][0])])
-    wp = processPath(np.array(wp), tuning_diff)
+    wp, wp_combine = processPath(np.array(wp), tuning_diff)
     #print(wp)
-    return wp
+    return wp, wp_combine
 
     
     
@@ -88,35 +97,34 @@ def processPath(wp, tuning_diff):
     #wp = wp / SR * DTWFRAMESIZE            # not needed for match
     if tuning_diff != float(0): wp = scaleDtw(wp, tuning_diff)
     wp = wp[wp[:,0].argsort()]
-    wp = removeNonlinear(wp)
+    wp, wp_combine = removeNonlinear(wp)
     #wp = wp.tolist()
-    return wp
+    return wp, wp_combine
 
 
 def removeNonlinear(wp):
     #slen = SEGMENT_LENGTH * SR / DTWFRAMESIZE
     slen = SEGMENT_LENGTH / MATCH_INCREMENT
-
     number_of_chunks = len(wp) / slen
     try:
         chunks = np.array_split(wp, number_of_chunks)  # split to chunks of roughly same length, ValueError: number sections must be larger than 0. (?)
     except:
-        return []
+        return [], wp
     wp_plot = []
     for chunk in chunks:
         slope, intercept, r_value = stats.linregress(chunk)[:3]
-        if LINREGRESS_MAX < round(slope, 2) > LINREGRESS_MIN:
+        if r_value**2 >= R2_1 and LINREGRESS_MAX > round(slope, 2) > LINREGRESS_MIN:
             wp_plot.append(chunk)
-    if len(wp_plot) <= 1: 
+    if len(wp_plot) < MIN_TRUE: 
         wp_plot = []  # testing: omit if only one chunk is aligned to avoid false positives
     else:
         w_combine = wp_plot[0]
         for d in wp_plot[1:]: 
             w_combine = np.concatenate((w_combine, d), axis=0)
         slope, intercept, r_value = stats.linregress(w_combine)[:3]
-        if not 1.2 > round(slope, 2) > 0.8:         # check slope for all pieces
+        if not (r_value**2 > R2_2 and LINREGRESS2_MAX > round(slope, 2) > LINREGRESS2_MIN):         # check slope for all pieces
             wp_plot = []
-    return wp_plot
+    return wp_plot, wp
 
 
 def _removeNonlinear(wp):   # testing
@@ -150,12 +158,13 @@ def resampleAudio(a, tuning_diff=0):
         return a
 
 
-def plotFigure(ws, l1, l2, file1, file2, tuning_diff):
+def plotFigure(ws, wp, l1, l2, file1, file2, tuning_diff):
     fsplit1 = file1.split('/')
     #fname1 = '/'.join(fsplit1[-2:])
     fsplit2 = file2.split('/')
     #fname2 = '/'.join(fsplit2[-2:])
     pdfname = os.path.join(gl.dstdir, '{0}_{1}.png'.format(fsplit1[-1], fsplit2[-1]))
+    pdfname2 = os.path.join(gl.dstdir, '{0}_{1}_full.png'.format(fsplit1[-1], fsplit2[-1]))
 
     jsonname = os.path.join(gl.dstdir, '{0}_{1}.json'.format(fsplit1[-1], fsplit2[-1]))
     dtw = ws[0]
@@ -165,7 +174,7 @@ def plotFigure(ws, l1, l2, file1, file2, tuning_diff):
     dtw = dtw.tolist()
     j = { 'dtw': dtw, 'filenames': [file1, file2], 'lengths': [l1/SR, l2/SR], 'tuning_diff': tuning_diff }
     json.dump(j, open(jsonname, 'w', encoding='utf-8'), sort_keys=True)
-
+    # plot processed wp
     p = plt.figure()
     plt.title('{0}\n{1}'.format(file1, file2))
     for w in ws:
@@ -174,6 +183,15 @@ def plotFigure(ws, l1, l2, file1, file2, tuning_diff):
     plt.plot(l1/SR, l2/SR, color='w')
     plt.tight_layout()
     p.savefig(pdfname, bbox_inches='tight')
+    plt.close(p)
+    # plot original wp
+    p = plt.figure()
+    plt.title('{0}\n{1}'.format(file1, file2))
+    plt.plot(wp[:, 0], wp[:, 1], color='y')
+    plt.plot(0, 0, color='w')  # include full audio length in plot
+    plt.plot(l1/SR, l2/SR, color='w')
+    plt.tight_layout()
+    p.savefig(pdfname2, bbox_inches='tight')
     plt.close(p)
 
 
@@ -218,10 +236,10 @@ def matchStart(FILE1, FILE2, TUNING, DATE, TUNING_DIFF):
     #shmY = shared_memory.SharedMemory(name=shmnameY)
     #Y = np.ndarray(chroma_shape2, dtype=np.float32, buffer=shmY.buf)
 
-    wp_plot = match(file1_resampled, file2_buf, TUNING, TUNING_DIFF)
+    wp_plot, wp = match(file1_resampled, file2_buf, TUNING, TUNING_DIFF)
 
     if len(wp_plot) > 0:
-        plotFigure(wp_plot, FILE1[2][0], FILE2[2][0], filename1, filename2, TUNING_DIFF)
+        plotFigure(wp_plot, wp, FILE1[2][0], FILE2[2][0], filename1, filename2, TUNING_DIFF)
         resfile = filename1
         dtw = wp_plot[0]
 
