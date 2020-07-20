@@ -19,8 +19,9 @@ def dotPairs():
     pairs = []
     for d in folders:
         ids = d.split('_')
-        json_files = [f for f in os.listdir(os.path.join(SRC, d)) if f.endswith('full.png')]
-        for i, f in enumerate(json_files): json_files[i] = json_files[i].replace('_full.png', '')
+        json_files = [f for f in os.listdir(os.path.join(SRC, d)) if f.endswith('.json')]
+        #json_files = [f for f in os.listdir(os.path.join(SRC, d)) if f.endswith('full.png')]
+        #for i, f in enumerate(json_files): json_files[i] = json_files[i].replace('_full.png', '')
         
        
         for j in json_files:
