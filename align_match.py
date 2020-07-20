@@ -53,7 +53,7 @@ THREADS_MATCH = 24
 SR = 22050
 DTWFRAMESIZE = 512
 
-NUM_SIMILAR = 1
+NUM_SIMILAR = 1     # not in use
 
 
 class gl():
@@ -170,7 +170,7 @@ def processResult(p):
         #smin = sorted(v)[:NUM_SIMILAR]        # store filenames with min distances
         sort_sim = sorted(v)
         smin = [sort_sim[0]]
-        if sort_sim[1] <= 2 * sort_sim[0]:
+        if sort_sim[0][0] < 0.1 and sort_sim[1][0] <= 2 * sort_sim[0][0]:   # add first 2 if small value
             smin.append(sort_sim[1])
         #smin = sorted(v)[:1]        # for testing
         for i in smin: res.append([k] + [i[1]]) # store recording pairs with all info

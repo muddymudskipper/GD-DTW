@@ -2,9 +2,9 @@ import os, sys
 from make_folder_dict import dateDict
 from graphviz import Digraph
 
-DATE = sys.argv[1]
+#DATE = sys.argv[1]
 
-SRC = os.path.join('results', DATE)
+#SRC = os.path.join('results', DATE)
 
 
     
@@ -14,21 +14,21 @@ def etreeNumber(e):
         except: pass
 
 
-def dotPairs():
-    folders = [d for d in os.listdir(SRC) if not d.startswith('.')]
+def dotPairs(date):
+    src = os.path.join('results', date)
+    folders = [d for d in os.listdir(src) if not d.startswith('.')]
     pairs = []
     for d in folders:
         ids = d.split('_')
-        json_files = [f for f in os.listdir(os.path.join(SRC, d)) if f.endswith('.json')]
+        json_files = [f for f in os.listdir(os.path.join(src, d)) if f.endswith('.json')]
         #json_files = [f for f in os.listdir(os.path.join(SRC, d)) if f.endswith('full.png')]
         #for i, f in enumerate(json_files): json_files[i] = json_files[i].replace('_full.png', '')
         
        
         for j in json_files:
             p = j.split('__') 
-
-                 # change file separator to '__'
-            
+            p[1] = p[1].replace('.json', '')
+        
             pair = (ids[0]+'_'+p[0], ids[1]+'_'+p[1])
             pairs.append(pair)
 
@@ -37,8 +37,8 @@ def dotPairs():
 
         #print(os.path.join(SRC, d, f))
 
-def makeDot(pairs, unmatched):
-    dot = Digraph(comment=DATE)
+def makeDot(pairs, unmatched, date):
+    dot = Digraph(comment=date)
 
     added = []
     for p in pairs:
@@ -59,8 +59,9 @@ def makeDot(pairs, unmatched):
 
 
 
-def main():
-    folders = dateDict()[DATE]
+def makeDotStart(date):
+    folders = dateDict()[date]
+    
     all_files = []
     for d in folders:
         all_files += [os.path.join(d, f) for f in os.listdir(d) if f.lower().endswith(('flac', 'mp3', 'shn'))]
@@ -72,7 +73,7 @@ def main():
         all_files[i] = (str(etreeNumber(s[0]))+'_'+s[1])
 
 
-    pairs = dotPairs()
+    pairs = dotPairs(date)
     #print(len(pairs))
 
     for p in pairs:
@@ -83,8 +84,8 @@ def main():
 
     #   print(all_files)
 
-    dot = makeDot(pairs, all_files)
-    dot.render(f'{DATE}.dot', view=False)  
+    dot = makeDot(pairs, all_files, date)
+    dot.render(f'{date}.dot', view=False)  
 
-main()
+
   
