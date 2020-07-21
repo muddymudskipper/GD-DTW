@@ -2,7 +2,6 @@ import os, sys
 from graphviz import Digraph
 from make_folder_dict import dateDict
 
-
 #DATE = sys.argv[1]
 #SRC = os.path.join('results', DATE)
 
@@ -47,8 +46,6 @@ def makeDot(pairs, unmatched, date):
             dot.node(u, u)
 
     return dot
-
-
 
 
 def makeDotStart(date):

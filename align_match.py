@@ -53,7 +53,7 @@ THREADS_MATCH = 24
 SR = 22050
 DTWFRAMESIZE = 512
 
-NUM_SIMILAR = 1     # not in use
+NUM_SIMILAR = 1 
 
 
 class gl():
@@ -167,12 +167,11 @@ def processResult(p):
         if i[0] not in pdict: pdict[i[0]] = []
         pdict[i[0]].append([i[2], i[1]])
     for k, v in pdict.items():
-        #smin = sorted(v)[:NUM_SIMILAR]        # store filenames with min distances
-        sort_sim = sorted(v)
-        smin = [sort_sim[0]]
-        if sort_sim[0][0] < 0.1 and sort_sim[1][0] <= 2 * sort_sim[0][0]:   # add first 2 if small value
-            smin.append(sort_sim[1])
-        #smin = sorted(v)[:1]        # for testing
+        smin = sorted(v)[:NUM_SIMILAR]        # store filenames with min distances
+        #sort_sim = sorted(v)
+        #smin = [sort_sim[0]]
+        #if sort_sim[0][0] < 0.1 and sort_sim[1][0] <= 2 * sort_sim[0][0]:   # add first 2 if small value
+        #    smin.append(sort_sim[1])
         for i in smin: res.append([k] + [i[1]]) # store recording pairs with all info
 
     
