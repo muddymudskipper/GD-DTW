@@ -158,7 +158,7 @@ def resampleAudio(a, tuning_diff=0):
         return a
 
 
-def plotFigure(ws, wp, l1, l2, file1, file2, tuning_diff):
+def plotFigure(ws, wp, l1, l2, file1, file2, tuning_diff, tuning):
     fsplit1 = file1.split('/')
     #fname1 = '/'.join(fsplit1[-2:])
     fsplit2 = file2.split('/')
@@ -167,13 +167,17 @@ def plotFigure(ws, wp, l1, l2, file1, file2, tuning_diff):
     pdfname2 = os.path.join(gl.dstdir, '{0}__{1}_full.png'.format(fsplit1[-1], fsplit2[-1]))
 
     jsonname = os.path.join(gl.dstdir, '{0}__{1}.json'.format(fsplit1[-1], fsplit2[-1]))
+    jsonname2 = os.path.join(gl.dstdir, '{0}__{1}_full.json'.format(fsplit1[-1], fsplit2[-1]))
     dtw = ws[0]
     if len(ws) > 1:
         for d in ws[1:]: 
             dtw = np.concatenate((dtw, d), axis=0)
     dtw = dtw.tolist()
-    j = { 'dtw': dtw, 'filenames': [file1, file2], 'lengths': [l1/SR, l2/SR], 'tuning_diff': tuning_diff }
+    j = { 'dtw': dtw, 'filenames': [file1, file2], 'lengths': [l1/SR, l2/SR], 'tuning_diff': tuning_diff, 'tuning': tuning }
     json.dump(j, open(jsonname, 'w', encoding='utf-8'), sort_keys=True)
+    # plot full wp
+    j = { 'dtw_full': wp.tolist(), 'filenames': [file1, file2], 'lengths': [l1/SR, l2/SR], 'tuning_diff': tuning_diff, 'tuning': tuning }
+    json.dump(j, open(jsonname2, 'w', encoding='utf-8'), sort_keys=True)
     # plot processed wp
     p = plt.figure()
     plt.title('{0}\n{1}'.format(file1, file2))
@@ -239,7 +243,7 @@ def matchStart(FILE1, FILE2, TUNING, DATE, TUNING_DIFF):
     wp_plot, wp = match(file1_resampled, file2_buf, TUNING, TUNING_DIFF)
 
     if len(wp_plot) > 0:
-        plotFigure(wp_plot, wp, FILE1[2][0], FILE2[2][0], filename1, filename2, TUNING_DIFF)
+        plotFigure(wp_plot, wp, FILE1[2][0], FILE2[2][0], filename1, filename2, TUNING_DIFF, TUNING)
         resfile = filename1
         dtw = wp_plot[0]
 

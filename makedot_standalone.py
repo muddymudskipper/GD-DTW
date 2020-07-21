@@ -2,8 +2,8 @@ import os, sys
 from graphviz import Digraph
 from make_folder_dict import dateDict
 
-#DATE = sys.argv[1]
-#SRC = os.path.join('results', DATE)
+DATE = sys.argv[1]
+SRC = os.path.join('results', DATE)
 
 
 def etreeNumber(e):
@@ -73,4 +73,4 @@ def makeDotStart(date):
     dot = makeDot(pairs, all_files, date)
     dot.render(f'{date}.dot', view=False)  
 
-#makeDotStart(DATE)
+makeDotStart(DATE)
