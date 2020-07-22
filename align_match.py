@@ -91,7 +91,6 @@ def loadRecordings():
     for i, rec in enumerate(recordings):
         etree_number = etreeNumber(rec[0][0])
         for j, f in enumerate(rec):
-            print('{0}_{1}_audio')
             gl.shms.append(shared_memory.SharedMemory(create=True, size=f[1].nbytes, name='{0}_{1}_audio'.format(etree_number, j)))
             s = np.ndarray(f[1].shape, dtype=np.float32, buffer=gl.shms[-1].buf)
             s[:] = f[1][:]
