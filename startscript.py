@@ -6,12 +6,15 @@ from makedot import makeDotStart
 
 YEAR = sys.argv[1]
 
+
+dates = sorted(list(filter(lambda x: x.split('-')[0] == YEAR, dateDict())))
+
 try:
-    START = int(sys.argv[2])     # start with this item in dates list
+    START = dates.index(sys.argv[2])     # start with this date
 except:
     START = 0
 
-dates = sorted(list(filter(lambda x: x.split('-')[0] == YEAR, dateDict())))
+
 tmpl = 'python align_match.py {0}'
 
 for d in dates[START:]:
@@ -19,6 +22,6 @@ for d in dates[START:]:
     print(cmd)
     Popen(cmd, shell=True).wait()
     makeDotStart(d)
-    
+
 
 

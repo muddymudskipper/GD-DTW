@@ -173,10 +173,10 @@ def plotFigure(ws, wp, l1, l2, file1, file2, tuning_diff, tuning):
         for d in ws[1:]: 
             dtw = np.concatenate((dtw, d), axis=0)
     dtw = dtw.tolist()
-    j = { 'dtw': dtw, 'filenames': [file1, file2], 'lengths': [l1/SR, l2/SR], 'tuning_diff': tuning_diff, 'tuning': tuning }
+    j = { 'dtw': dtw, 'filenames': [file1, file2], 'lengths': [l1/SR, l2/SR], 'tuning_diff': tuning_diff, 'tuning': str(tuning) }
     json.dump(j, open(jsonname, 'w', encoding='utf-8'), sort_keys=True)
     # plot full wp
-    j = { 'dtw_full': wp.tolist(), 'filenames': [file1, file2], 'lengths': [l1/SR, l2/SR], 'tuning_diff': tuning_diff, 'tuning': tuning }
+    j = { 'dtw_full': wp.tolist(), 'filenames': [file1, file2], 'lengths': [l1/SR, l2/SR], 'tuning_diff': tuning_diff, 'tuning': str(tuning) }
     json.dump(j, open(jsonname2, 'w', encoding='utf-8'), sort_keys=True)
     # plot processed wp
     p = plt.figure()
@@ -209,7 +209,7 @@ def makeFolders(e1, e2, date):
 
 
 def etreeNumber(e):
-    for j in e.split('/')[-2].split(('.')):
+    for j in e.split('/')[-2].split('.'):
         try: return int(j)
         except: pass
 

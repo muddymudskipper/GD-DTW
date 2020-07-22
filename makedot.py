@@ -71,6 +71,6 @@ def makeDotStart(date):
 
     print(f'{date}.dot')
     dot = makeDot(pairs, all_files, date)
-    dot.render(f'{date}.dot', view=False)  
+    dot.render(os.path.join('results', f'{date}.dot'), view=False)  
 
 #makeDotStart(DATE)

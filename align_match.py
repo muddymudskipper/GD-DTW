@@ -59,15 +59,35 @@ NUM_SIMILAR = 1
 class gl():
     shms = []
 
+def checkEtreeNumbers(folders):
+    # skip dates where dupliacte etree numbers exist in the list of recordings
+    # e.g.  gd1990-03-29.123925.mk4.flac16
+    #       gd1990-03-29.127385.mtx.eichorn.flac16
+    # TODO: save unique etree number in files list
+    es = []
+    for r in folders:
+        e = etreeNumber(r + '/')
+        #print(e)
+        if e in es:
+            return False
+        else:
+            es.append(e)
+    return True
+
 
 def loadRecordings():
-    print('loading audio files')
+    
 
     #folders = pickle.load(open('date_folder_dict.pickle', 'rb'))[DATE]
     #folders = [os.path.join(RECSDIR, d) for d in os.listdir(RECSDIR) if os.path.isdir(os.path.join(RECSDIR, d))]
 
     #recordings = pickle.load(open('recordings.pickle', 'rb'))
     folders = dateDict()[DATE]
+    if not checkEtreeNumbers(folders):
+        print('SKIPPING: DUPLICATE IDS')
+        sys.exit()
+
+    print('loading audio files')
 
     recordings = []
     for d in folders:
@@ -83,13 +103,14 @@ def loadRecordings():
     recordings = sorted(recordings, key=lambda x: combinedLength(x))
     # shared memory for each audio file
 
+    
     #pickle.dump(recordings, open('recordings.pickle', 'wb'))
     
 
     for i, rec in enumerate(recordings):
         etree_number = etreeNumber(rec[0][0])
         for j, f in enumerate(rec):
-            #print(i, f[0])
+            print('{0}_{1}_audio')
             gl.shms.append(shared_memory.SharedMemory(create=True, size=f[1].nbytes, name='{0}_{1}_audio'.format(etree_number, j)))
             s = np.ndarray(f[1].shape, dtype=np.float32, buffer=gl.shms[-1].buf)
             s[:] = f[1][:]
@@ -464,7 +485,7 @@ def estimate_memory(res):
 
 
 def etreeNumber(e):
-    for j in e.split('/')[-2].split(('.')):
+    for j in e.split('/')[-2].split('.'):
         try: return int(j)
         except: pass
 
