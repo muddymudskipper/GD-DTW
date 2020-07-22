@@ -1,7 +1,7 @@
 
 import sys
 from make_folder_dict import dateDict
-from subprocess import Popen
+from subprocess import Popen, PIPE
 from makedot import makeDotStart
 
 YEAR = sys.argv[1]
@@ -20,7 +20,10 @@ tmpl = 'python align_match.py {0}'
 for d in dates[START:]:
     cmd = tmpl.format(d)
     print(cmd)
-    Popen(cmd, shell=True).wait()
+    stdout, std = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True).communicate()
+    if stdout == b'SKIPPING: DUPLICATE IDS\n':
+        print('SKIPPING: DUPLICATE IDS')
+        continue
     makeDotStart(d)
 
 
