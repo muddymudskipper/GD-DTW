@@ -59,22 +59,6 @@ NUM_SIMILAR = 1
 class gl():
     shms = []
 
-def checkEtreeNumbers(folders):
-    # skip dates where dupliacte etree numbers exist in the list of recordings
-    # e.g.  gd1990-03-29.123925.mk4.flac16
-    #       gd1990-03-29.127385.mtx.eichorn.flac16
-    # TODO: save unique etree number in files list
-    es = []
-    for r in folders:
-        e = etreeNumber(r + '/')
-        #print(e)
-        if e in es:
-            return False
-        else:
-            es.append(e)
-    return True
-
-
 def loadRecordings():
     
 
@@ -82,12 +66,9 @@ def loadRecordings():
     #folders = [os.path.join(RECSDIR, d) for d in os.listdir(RECSDIR) if os.path.isdir(os.path.join(RECSDIR, d))]
 
     #recordings = pickle.load(open('recordings.pickle', 'rb'))
-    folders = dateDict()[DATE]
-    if not checkEtreeNumbers(folders):
-        print('SKIPPING: DUPLICATE IDS')
-        sys.exit()
-
+    
     print('loading audio files')
+    folders = dateDict()[DATE]
 
     recordings = []
     for d in folders:
