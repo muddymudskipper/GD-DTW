@@ -4,17 +4,22 @@ from make_folder_dict import dateDict
 from subprocess import Popen, PIPE
 from makedot import makeDotStart
 
+
 YEAR = sys.argv[1]
 
-
 date_dict = dateDict()
-
 dates = sorted(list(filter(lambda x: x.split('-')[0] == YEAR, date_dict)))
 
 try:
     START = dates.index(sys.argv[2])     # start with this date
 except:
     START = 0
+
+try:
+    END = dates.index(sys.argv[3]) + 1     # end with this date
+except:
+    END = False
+
 
 
 tmpl = 'python align_match.py {0}'
@@ -41,16 +46,23 @@ def etreeNumber(e):
         try: return int(j)
         except: pass
 
+def main():
+    if END:
+        pdates = dates[START:END]
+    else:
+        pdates = dates[START:]
 
-for d in dates[START:]:    
-    if not checkEtreeNumbers(date_dict[d]):
-        print('SKIPPING: DUPLICATE IDS')
-        continue
-    cmd = tmpl.format(d)
-    print(cmd)
-    Popen(cmd, shell=True).communicate()
+    for d in pdates:    
+        if not checkEtreeNumbers(date_dict[d]):
+            print('SKIPPING: DUPLICATE IDS')
+            continue
+        cmd = tmpl.format(d)
+        print(cmd)
+        Popen(cmd, shell=True).communicate()
 
-    makeDotStart(d)
+        makeDotStart(d)
+
+main()
 
 
 

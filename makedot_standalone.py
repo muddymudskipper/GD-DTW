@@ -25,10 +25,12 @@ def dotPairs(date):
     for d in folders:
         ids = d.split('_')
         json_files = [f for f in os.listdir(os.path.join(src, d)) if f.endswith('_full.json')]
+        #json_files = [f for f in os.listdir(os.path.join(src, d)) if f.endswith('.json')]
         
         for j in json_files:
             p = j.split('__') 
             p[1] = p[1].replace('_full.json', '')
+            #p[1] = p[1].replace('.json', '')
         
             pair = (ids[0]+'_'+p[0], ids[1]+'_'+p[1])
             pairs.append(pair)
@@ -89,6 +91,6 @@ def makeDotStart(date):
 
     print(f'{date}.dot')
     dot = makeDot(pairs, all_files, date, col_dict)
-    dot.save(os.path.join('results', f'{date}.dot'))      
+    dot.save(os.path.join('results', date, f'{date}.dot'))      
 
 makeDotStart(DATE)
