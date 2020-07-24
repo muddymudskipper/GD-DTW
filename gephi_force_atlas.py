@@ -3,7 +3,7 @@ from subprocess import Popen, DEVNULL, PIPE
 from tqdm import tqdm
 import multiprocessing as mp
 
-THREADS = 24
+THREADS = 48
 
 
 def getFiles():

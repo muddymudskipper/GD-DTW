@@ -17,7 +17,7 @@ classpath.addFile(toolkit)
 import org.openide.util.Lookup as Lookup
 Lookup = Lookup.getDefault().lookup
 
-STEPS = 50000
+STEPS = 10000
 
 
 def lookup(name, namespace='org.gephi.'):
@@ -130,13 +130,14 @@ def layout(graph_file=None, layout=True, save_pdf=True, save_gephi=False, in_deg
         #force_atlas.adjustSizes = True
         #force_atlas.attractionStrength = 8
         #force_atlas.repulsionStrength = 2000
+        #print(dir(force_atlas))
 
         force_atlas.inertia = 0.1
-        force_atlas.repulsionStrength = 200
+        force_atlas.repulsionStrength = 230
         force_atlas.attractionStrength = 10
         force_atlas.maxDisplacement = 10
-        force_atlas.gravity = 30
-        force_atlas.speed = 2
+        force_atlas.gravity = 20
+        force_atlas.speed = 3
         force_atlas.adjustSizes = True
         
 
@@ -150,24 +151,24 @@ def layout(graph_file=None, layout=True, save_pdf=True, save_gephi=False, in_deg
             steps -= 1
 
 
-        '''
+        
         # I think there's a bug in label adjust so that it doesn't work in the toolkit?
         # http://forum.gephi.org/viewtopic.php?t=1435
         lab = lookup('layout.plugin.labelAdjust.LabelAdjustBuilder')
         label_adjust = lab.buildLayout()
         label_adjust.resetPropertiesValues()
-        label_adjust.setGraphModel(GraphController.getModel())
+        label_adjust.setGraphModel(GraphController.getGraphModel())
 
         
         label_adjust.initAlgo()
         steps = 50000
         print "running label adjust for %d steps" % steps
         while steps and label_adjust.canAlgo() and not label_adjust.isConverged():
-            if steps % 1000 == 0:
+            if steps % 5000 == 0:
                 print "step %d" % steps
             label_adjust.goAlgo()
             steps -= 1
-        '''
+        
 
     # Adjust node sizes (Force Atlas changes them?)
     gm = GraphController.getGraphModel()
@@ -180,13 +181,16 @@ def layout(graph_file=None, layout=True, save_pdf=True, save_gephi=False, in_deg
         for node in nodes:
             #node_data = node.getNodeData()
             #node_data.setSize(10)
-            node.setSize(10)
+            node.setSize(8)
 
     preview = PreviewController.getModel()
     preview.properties.putValue('node.border.width', 0)
-    preview.properties.putValue('node.label.show', False)
-    
-    
+    preview.properties.putValue('node.label.show', True)
+    preview.properties.putValue('node.label.font', java.awt.Font('Arial', java.awt.Font.PLAIN, 3))
+    preview.properties.putValue('directed', True)
+    #preview.properties.putValue('arrow.size', 100)
+
+
     PreviewController.refreshPreview() # necessary?
     
     # When done, save what we did
