@@ -39,7 +39,7 @@ def dotPairs(date):
 
 
 def makeDot(pairs, unmatched, date, col_dict):
-    dot = Digraph(comment=date)
+    dot = Digraph(name=date)
     added = []
     for p in pairs:
         for i in p:
