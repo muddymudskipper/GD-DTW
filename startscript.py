@@ -10,15 +10,14 @@ YEAR = sys.argv[1]
 date_dict = dateDict()
 dates = sorted(list(filter(lambda x: x.split('-')[0] == YEAR, date_dict)))
 
-try:
-    START = dates.index(sys.argv[2])     # start with this date
-except:
-    START = 0
 
-try:
-    END = dates.index(sys.argv[3]) + 1     # end with this date
-except:
-    END = False
+
+if sys.argv[2] == 0: START = 0
+else: START = dates.index(sys.argv[2])     # start with this date
+
+
+try: END = dates.index(sys.argv[3]) + 1     # end with this date
+except: END = False
 
 
 

@@ -1,16 +1,14 @@
 #!/opt/local/bin/python
 # test sub dtw post AES
 
-import librosa, os, json, sys, warnings
+import librosa, os, json, sys, vamp
 from samplerate import resample
 import numpy as np
-from subprocess import Popen, DEVNULL, PIPE
 from uuid import uuid4
 import matplotlib.pyplot as plt
 from scipy import stats
 from math import ceil
 from multiprocessing import shared_memory
-import vamp
 
 
 np.seterr(divide='ignore', invalid='ignore')   # stats division by zero warning
@@ -81,7 +79,6 @@ def match(X, Y, tuning=440, tuning_diff=0):
     return wp, wp_combine
 
     
-    
 def makeTwoChannels(a, b):
     if len(a) > len(b):
         pad = np.pad(b, [0,len(a)-len(b)])
@@ -103,11 +100,11 @@ def processPath(wp, tuning_diff):
 
 
 def removeNonlinear(wp):
-    #slen = SEGMENT_LENGTH * SR / DTWFRAMESIZE
     slen = SEGMENT_LENGTH / MATCH_INCREMENT
     number_of_chunks = len(wp) / slen
+    # if len(wp) == O: return [], wp
     try:
-        chunks = np.array_split(wp, number_of_chunks)  # split to chunks of roughly same length, ValueError: number sections must be larger than 0. (?)
+        chunks = np.array_split(wp, number_of_chunks)  # split to chunks of roughly same length, ValueError: number sections must be larger than 0.
     except:
         return [], wp
     wp_plot = []

@@ -11,16 +11,14 @@ from essentia.pytools.spectral import hpcpgram
 import itertools, os, json, sys
 import multiprocessing as mp
 from multiprocessing import shared_memory
+from multiprocessing.managers import SharedMemoryManager
 from subprocess import Popen, DEVNULL, PIPE
 import numpy as np
 from uuid import uuid4
-from librosa.feature import chroma_cens
 from tqdm import tqdm
 from subprocess import Popen, DEVNULL, PIPE
 import pickle
-from multiprocessing.managers import SharedMemoryManager
-from math import ceil, floor, log2
-from random import shuffle
+from math import log2
 import vamp
 
 #from test_subdtw_NEW_tuning import dtwstart
@@ -43,9 +41,7 @@ DSTDIR = os.path.join('results', DATE)
 
 CPUS = 24
 THREADS_LOADING = 24
-#THREADS_CHROMA = 24
 THREADS_SIMILARITY = 12
-#THREADS_DTW = 10
 THREADS_TUNING = 24
 THREADS_TUNINGDIFF = 24
 THREADS_MATCH = 24
@@ -59,9 +55,8 @@ NUM_SIMILAR = 1
 class gl():
     shms = []
 
-def loadRecordings():
-    
 
+def loadRecordings():
     #folders = pickle.load(open('date_folder_dict.pickle', 'rb'))[DATE]
     #folders = [os.path.join(RECSDIR, d) for d in os.listdir(RECSDIR) if os.path.isdir(os.path.join(RECSDIR, d))]
 
@@ -83,11 +78,8 @@ def loadRecordings():
         recordings.append(p)
     recordings = sorted(recordings, key=lambda x: combinedLength(x))
     # shared memory for each audio file
-
-    
     #pickle.dump(recordings, open('recordings.pickle', 'wb'))
     
-
     for i, rec in enumerate(recordings):
         etree_number = etreeNumber(rec[0][0])
         for j, f in enumerate(rec):
@@ -154,10 +146,7 @@ def similarity(audiopair):
                                                     disExtension=0.5,
                                                     alignmentType='serra09',
                                                     distanceType='asymmetric')(pair_crp)
-    #f1s = ('/').join(f1.split('/')[-2:])
-    #f2s = ('/').join(f2.split('/')[-2:])
     #print(distance, f1s, f2s)
-    
     return([audiopair[0], audiopair[1], distance])
 
 
@@ -189,17 +178,6 @@ def processResult(p):
     res = list(tqdm(pool.imap(tuningDiffStart, res), total=len(res)))
     pool.close()
     pool.join()
-
-    '''
-    chroma_shapes = getChromas(audio_compared_to)
-    # append chroma shape
-    for i in res: i.append(chroma_shapes[i[1][0]][1])
-    #print(res)
-    #print(audio_compared_to)
-
-    res = estimate_memory(res)
-    res = groupPairsBySize(res)
-    '''
     #print(res[0])
     return res
 
@@ -226,54 +204,6 @@ def getTuning(f):
     return (f[0], f[1], freq)  # return filename, index, tuning
 
 
-def groupPairsBySize(res):
-    # group processes by how many parallel processes can be run
-    shm_mem = sum(s.size for s in gl.shms) * B_TO_GB
-    #print(shm_mem)
-    avail_mem = FREE_MEM - shm_mem
-
-    # sort audiopairs by memory use
-    res = sorted(res, key=lambda x: x[4], reverse=True)
-    total = len(res)
-    resdict = {}
-    for r in res:
-        #cpus = int(avail_mem / r[4])
-        #if cpus == 0: cpus = 1
-        cpus = avail_mem / r[4]
-        if cpus < 1: 
-            cpus = 1
-        else:
-            cpus = normal_round(cpus + (0.2 * cpus))
-            if cpus > CPUS: cpus = CPUS
-        if cpus not in resdict: 
-            resdict[cpus] = []
-        resdict[cpus].append(r)
-
-    reslist = sorted([(k, v) for k, v in resdict.items()])  # [0] = cpus, [1] = audiopairs
-    #json.dump(resdict, open('cpus.json', 'w', encoding='utf-8'), sort_keys=True)
-    for i, r in enumerate(reslist[:-1]):
-        while len(r[1]) < r[0]:
-            moved = False
-            for s in reslist[i+1:]:
-                for a in s[1]:
-                    moved = True
-                    s[1].remove(a)
-                    r[1].append(a) 
-            if not moved: break
-
-    reslist = list(filter(lambda x: len(x[1]) > 0, reslist))
-    [shuffle(i[1]) for i in reslist[1:]]
-
-    #json.dump(reslist, open('cpus3.json', 'w', encoding='utf-8'), sort_keys=True)
-    return reslist
-
-
-def normal_round(n):
-    if n - floor(n) < 0.5:
-        return floor(n)
-    return ceil(n)
-
-
 def runScript(f):
     #file1 = f[0][0]
     #file2 = f[1][0]
@@ -282,7 +212,6 @@ def runScript(f):
     #resfile = dtwstart(f[0], f[1], f[2], DATE, f[3])
     resfile = matchStart(f[0], f[1], f[2], DATE, f[3])
     # file1, file2, tuning, date, tuning diff
-   
     return resfile
 
 
@@ -315,34 +244,6 @@ def unlinkShm(fs, ftype):
             shm.close()
             shm.unlink()
         except: pass
-
-
-
-def getChromas(fs):
-    print('getting chromas')
-    pool = mp.Pool(nThreads(fs, THREADS_CHROMA))
-    #p = pool.map(getChroma, fs, chunksize=1)
-    p = list(tqdm(pool.imap(getChroma, fs), total=len(fs)))
-    pool.close()
-    pool.join()
-    p.sort()
-    chroma_shapes = {}
-    for c in p:
-        gl.shms.append(shared_memory.SharedMemory(create=True, size=c[2][0].nbytes, name='{0}_{1}_chroma'.format(etreeNumber(c[0]), c[1])))
-        s = np.ndarray(c[2][0].shape, dtype=np.float32, buffer=gl.shms[-1].buf)
-        s[:] = c[2][0][:]   
-        chroma_shapes[c[0]] = (c[1], (c[2][0].shape, c[2][1]))   # c[2][1] = tuning_frac
-    return chroma_shapes
-
-
-def getChroma(f):
-    shmname = '{0}_{1}_audio'.format(etreeNumber(f[0]), f[1])
-    shm = shared_memory.SharedMemory(name=shmname)
-    a = np.ndarray(f[2], dtype=np.float32, buffer=shm.buf)
-    tuning_frac = tuningFreq(a)
-    c = chroma_cens(y=a, sr=SR, hop_length=DTWFRAMESIZE, win_len_smooth=21, tuning=tuning_frac)
-    #print(f[0])
-    return (f[0], f[1], (c, tuning_frac))  # return filename, index, (chroma, tuning_frac)
 
 
 def tuningFreq(b):
@@ -417,22 +318,6 @@ def process(apairs, filenames2, run):
     pool.close()
     pool.join()
     
-    '''
-    total = sum([len(i[1]) for i in res])
-    count = 0
-    p = []
-    for i, e in enumerate(res):
-        le = len(e[1])
-        print(f'{i+1}/{len(res)} ({e[0]} CPUs) [total: {count}/{total}]')
-        threads = e[0]
-        if threads > le: threads = le
-        pool = mp.Pool(threads)
-        q = list(tqdm(pool.imap(runScript, e[1]), total=le))
-        pool.close()
-        pool.join()
-        p += q
-        count += le
-    '''
     unlinkShm(filenames2, 'audio')
     #unlinkShm(filenames2, 'chroma')
     
@@ -440,29 +325,6 @@ def process(apairs, filenames2, run):
     #print(matched_files)
     return matched_files
     
-
-def estimate_memory(res):
-    mem_estims = []
-    print('getting tuning differences')
-    pool = mp.Pool(nThreads(res, THREADS_TUNING))
-    p = list(tqdm(pool.imap(tuningDiffStart, res), total=len(res)))
-    pool.close()
-    pool.join()
-
-    for r in p:
-        file_len1 = r[0][2][0]
-        ratio = 2**(-r[3] / 1200)
-        file_len1 *= ratio
-    
-        chroma_len1 = ceil(ceil(file_len1) / DTWFRAMESIZE)
-        chroma_len2 = r[2][0][1]
-        msize = 3 * chroma_len1 * chroma_len2
-        psize = min([chroma_len1, chroma_len2]) * 2
-        res = (msize + psize) * 8 * B_TO_GB
-        r.append(res)
-    
-    return p
-
 
 def etreeNumber(e):
     for j in e.split('/')[-2].split('.'):
