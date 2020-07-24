@@ -4,9 +4,10 @@
 
 import java
 import os, glob, sys
-import classpath; 
+import classpath
 path = os.path.realpath(__file__)
-toolkit = os.path.join(os.path.dirname(path), 'gephi-toolkit-0.8.7.jar')
+#toolkit = os.path.join(os.path.dirname(path), 'gephi-toolkit-0.8.7.jar')
+toolkit = os.path.join(os.path.dirname(path), 'gephi-toolkit-0.9.1-all.jar')
 classpath.addFile(toolkit)
 # TODO: need /Users/jason/Code/gephi/toolkit/gephi-toolkit/org-openide-util.jar?
 
@@ -54,7 +55,7 @@ def show():
     from java.awt import BorderLayout
 
     pc = PreviewController
-    pc.refreshPreview();
+    pc.refreshPreview()
      
     # New Processing target, get the PApplet
     target = pc.getRenderTarget("processing")
@@ -121,7 +122,7 @@ def layout(graph_file=None, layout=True, save_pdf=True, save_gephi=False, in_deg
         # Setup Layout
         fa = lookup('layout.plugin.forceAtlas.ForceAtlas')
         force_atlas = fa.buildLayout()
-        force_atlas.setGraphModel(GraphController.getModel())
+        force_atlas.setGraphModel(GraphController.getGraphModel())
 
         force_atlas.resetPropertiesValues() # set defaults
         # for p in sorted(a, key=lambda p: (p.category, p.displayName, p.name)): 
@@ -135,17 +136,16 @@ def layout(graph_file=None, layout=True, save_pdf=True, save_gephi=False, in_deg
         force_atlas.attractionStrength = 10
         force_atlas.maxDisplacement = 10
         force_atlas.gravity = 30
+        force_atlas.speed = 2
         force_atlas.adjustSizes = True
-        
-        
         
 
         force_atlas.initAlgo()
         steps = STEPS
         print "running force atlas for %d steps" % steps
         while steps and force_atlas.canAlgo() and not force_atlas.isConverged():
-            #if steps % 1000 == 0:
-                #print "step %d" % steps
+            if steps % 5000 == 0:
+                print "step %d" % steps
             force_atlas.goAlgo()
             steps -= 1
 
@@ -170,7 +170,7 @@ def layout(graph_file=None, layout=True, save_pdf=True, save_gephi=False, in_deg
         '''
 
     # Adjust node sizes (Force Atlas changes them?)
-    gm = GraphController.getModel()
+    gm = GraphController.getGraphModel()
     gv = gm.getGraphVisible()
     nodes = list(gv.getNodes())
     #adjust_sizes(nodes, in_degrees=in_degrees)
@@ -178,8 +178,9 @@ def layout(graph_file=None, layout=True, save_pdf=True, save_gephi=False, in_deg
     # adjust the look a bit for the pdf
     if not in_degrees:
         for node in nodes:
-            node_data = node.getNodeData()
-            node_data.setSize(10)
+            #node_data = node.getNodeData()
+            #node_data.setSize(10)
+            node.setSize(10)
 
     preview = PreviewController.getModel()
     preview.properties.putValue('node.border.width', 0)
@@ -210,6 +211,7 @@ def layout(graph_file=None, layout=True, save_pdf=True, save_gephi=False, in_deg
     
 
 def inDegrees(dot):
+    # TODO: replace with gephi function get n degrees
     with open(dot) as f:
         lines = f.readlines()
     in_degrees = {}
