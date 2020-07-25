@@ -17,7 +17,7 @@ classpath.addFile(toolkit)
 import org.openide.util.Lookup as Lookup
 Lookup = Lookup.getDefault().lookup
 
-STEPS = 10000
+STEPS = 50000
 
 
 def lookup(name, namespace='org.gephi.'):
@@ -182,13 +182,15 @@ def layout(graph_file=None, layout=True, save_pdf=True, save_gephi=False, in_deg
             #node_data = node.getNodeData()
             #node_data.setSize(10)
             node.setSize(8)
+    
 
     preview = PreviewController.getModel()
     preview.properties.putValue('node.border.width', 0)
     preview.properties.putValue('node.label.show', True)
     preview.properties.putValue('node.label.font', java.awt.Font('Arial', java.awt.Font.PLAIN, 3))
-    preview.properties.putValue('directed', True)
-    #preview.properties.putValue('arrow.size', 100)
+    preview.properties.putValue('edge.curved', False)
+    #preview.properties.putValue('directed', True)
+    preview.properties.putValue('arrow.size', 3)
 
 
     PreviewController.refreshPreview() # necessary?

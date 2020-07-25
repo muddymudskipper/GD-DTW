@@ -19,13 +19,14 @@ def forceAtlas(d):
     p = Popen(cmd, shell=True, stdout=DEVNULL, stderr=DEVNULL).wait()
 
 
-
-def main():
+def start():
     dots = getFiles()
     pool = mp.Pool(THREADS)
     p = list(tqdm(pool.imap_unordered(forceAtlas, dots), total=len(dots)))
     pool.close()
     pool.join()
-    
-main()
+
+
+if __name__ == '__main__':
+    start()
                 

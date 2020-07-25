@@ -1,3 +1,5 @@
 results/
 temp/
 .jython_cache/
+__pycache__/
+
