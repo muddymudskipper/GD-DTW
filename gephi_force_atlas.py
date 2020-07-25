@@ -34,7 +34,7 @@ def forceAtlas(d):
 
 def start():
     dots = getFiles()
-    pool = mp.Pool(min([len(dots), THREADS])
+    pool = mp.Pool(min([len(dots), THREADS]))
     p = list(tqdm(pool.imap_unordered(forceAtlas, dots), total=len(dots)))
     pool.close()
     pool.join()
