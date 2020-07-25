@@ -5,7 +5,7 @@ from make_folder_dict import dateDict
 DATE = sys.argv[1]
 SRC = os.path.join('results', DATE)
 
-COLOURS = ['black', 'red', 'blue', 'yellow', 'darkorange', 'green', 'grey71', 'brown', 'pink1', 'cyan1', 'mediumpurple', 'wheat', 'darkolivegreen', 'burlywood', 'orangered', 'lightsteelblue', 'lightgoldenrod', 'cyan4', 'darkslategray', 'violetred3', 'yellow3']
+COLOURS = ['red', 'blue', 'yellow', 'darkorange', 'green', 'grey71', 'brown', 'pink1', 'cyan1', 'mediumpurple', 'wheat', 'darkolivegreen', 'burlywood', 'orangered', 'lightsteelblue', 'lightgoldenrod', 'cyan4', 'darkslategray', 'violetred3', 'yellow3']
 
 
 
