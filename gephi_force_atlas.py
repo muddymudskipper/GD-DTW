@@ -4,14 +4,17 @@ from tqdm import tqdm
 import multiprocessing as mp
 
 THREADS = 48
+FOLDER = 'results'
 
-
-def getFiles():
+def getFiles(all=False):
     dots = []
-    for root, dirs, files in os.walk('.'):
-        for filename in files:
-            if filename.endswith('.dot'):
-                dots.append(os.path.join(root, filename))
+    dirs = [d for d in os.listdir(FOLDER) if os.path.isdir(os.path.join(FOLDER, d))]
+    for d in dirs:
+        files = [f for f in os.listdir(os.path.join(FOLDER, d))]
+        if all or len(list(filter(lambda x: x.endswith('gephi.pdf'), files))) == 0:
+            dotfile = list(filter(lambda x: x.endswith('.dot'), files))
+            if dotfile:
+                dots.append(dotfile[0])
     return dots
 
 def forceAtlas(d):
