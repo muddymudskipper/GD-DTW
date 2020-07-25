@@ -10,6 +10,6 @@ May need increase of resource limit (ulimit -n)
 Prerequisites:
 
 Python 3.8,
-Jython,
+Jython (only for gephi script),
 Vamp plugins: nnls-chroma, tuning-difference, match-subsequence
 
