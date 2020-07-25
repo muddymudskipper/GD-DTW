@@ -137,7 +137,7 @@ def layout(graph_file=None, layout=True, save_pdf=True, save_gephi=False, in_deg
         force_atlas.attractionStrength = 10
         force_atlas.maxDisplacement = 10
         force_atlas.gravity = 20
-        force_atlas.speed = 3
+        force_atlas.speed = 1
         force_atlas.adjustSizes = True
         
 
