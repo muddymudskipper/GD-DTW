@@ -31,7 +31,8 @@ def checkEtreeNumbers(folders):
     # TODO: save unique etree number in files list
     es = []
     for r in folders:
-        e = etreeNumber(r + '/')
+        #e = etreeNumber(r + '/')
+        e = etreeNumber(r)
         #print(e)
         if e in es:
             return False
@@ -45,16 +46,21 @@ def etreeNumber(e):
         try: return int(j)
         except: pass
 
+
 def main():
     if END:
         pdates = dates[START:END]
     else:
         pdates = dates[START:]
-
+    
     for d in pdates:    
+        if len(date_dict[d]) < 2:
+            print('SKIPPING: NOT ENOUGH RECORDINGS')
+            continue
         if not checkEtreeNumbers(date_dict[d]):
             print('SKIPPING: DUPLICATE IDS')
             continue
+
         cmd = tmpl.format(d)
         print(cmd)
         Popen(cmd, shell=True).communicate()

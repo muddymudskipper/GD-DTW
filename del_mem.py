@@ -1,10 +1,12 @@
 
 import pickle, os, sys
 from multiprocessing import shared_memory
+from make_folder_dict import dateDict
 
 DATE = sys.argv[1]
 
-folders = pickle.load(open('date_folder_dict.pickle', 'rb'))[DATE]
+#folders = pickle.load(open('date_folder_dict.pickle', 'rb'))[DATE]
+folders = dateDict()[DATE]
 
 def etreeNumber(e):
     for j in e.split('/')[-2].split(('.')):
@@ -27,7 +29,7 @@ def deleteShms():
                     shm.close()
                     shm.unlock()
                 except: pass
-    pickle.dump(shmnames, open('shmnames.pickle', 'wb'))
+    #pickle.dump(shmnames, open('shmnames.pickle', 'wb'))
 
 def deleteShms2():
     shmnames = pickle.load(open('shmnames.pickle', 'rb'))
