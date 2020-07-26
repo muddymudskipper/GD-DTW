@@ -175,7 +175,7 @@ def processResult(p):
     for i in res: i.append(tunings[i[1][0]][1])
     print('getting tuning differences')
     pool = mp.Pool(nThreads(res, THREADS_TUNINGDIFF))
-    res = list(tqdm(pool.imap(tuningDiffStart, res), total=len(res)))
+    res = list(tqdm(pool.imap_unordered(tuningDiffStart, res), total=len(res)))
     pool.close()
     pool.join()
     #print(res[0])
@@ -185,7 +185,7 @@ def processResult(p):
 def getTunings(fs):
     print('getting tuning frequencies')
     pool = mp.Pool(nThreads(fs, THREADS_TUNING))
-    p = list(tqdm(pool.imap(getTuning, fs), total=len(fs)))
+    p = list(tqdm(pool.imap_unordered(getTuning, fs), total=len(fs)))
     pool.close()
     pool.join()
     p.sort()
@@ -303,7 +303,7 @@ def process(apairs, filenames2, run):
         #pickle.dump(res, open('processed_results1.pickle', 'wb'))
     else:
         pool = mp.Pool(nThreads(apairs, THREADS_SIMILARITY))
-        p = list(tqdm(pool.imap(similarity, apairs), total=len(apairs)))
+        p = list(tqdm(pool.imap_unordered(similarity, apairs), total=len(apairs)))
         pool.close()
         pool.join()
         #pickle.dump(p, open('processed_results1.pickle', 'wb'))
@@ -314,7 +314,7 @@ def process(apairs, filenames2, run):
        
     print('calculating match alignment')
     pool = mp.Pool(nThreads(res, THREADS_MATCH))
-    p = list(tqdm(pool.imap(runScript, res), total=len(res)))
+    p = list(tqdm(pool.imap_unordered(runScript, res), total=len(res)))
     pool.close()
     pool.join()
     
