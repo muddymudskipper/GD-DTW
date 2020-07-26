@@ -29,9 +29,6 @@ from make_folder_dict import dateDict
 #DIR = '/Volumes/Journal/Documents/OneDrive/OneDrive - Queen Mary, University of London/projects/SDTW/'
 #TEMPDIR = DIR + 'temp/'
 
-TOTAL_MEM = 64
-HEADROOM_MEM = 10
-FREE_MEM = TOTAL_MEM - HEADROOM_MEM
 B_TO_GB = 1 / 2**30
 
 DATE = sys.argv[1]
@@ -39,7 +36,6 @@ DATE = sys.argv[1]
 TEMPDIR = 'temp'
 DSTDIR = os.path.join('results', DATE)
 
-CPUS = 24
 THREADS_LOADING = 24
 THREADS_SIMILARITY = 12
 THREADS_TUNING = 24
@@ -47,7 +43,6 @@ THREADS_TUNINGDIFF = 24
 THREADS_MATCH = 24
 
 SR = 22050
-DTWFRAMESIZE = 512
 
 NUM_SIMILAR = 1 
 
@@ -67,7 +62,7 @@ def loadRecordings():
 
     recordings = []
     for d in folders:
-        print('loading files for', d.split('/')[-1])
+        print(d.split('/')[-1])
         files = [os.path.join(d, f) for f in os.listdir(d) if f.lower().endswith(('flac', 'mp3', 'shn'))]
         pool = mp.Pool(nThreads(files, THREADS_LOADING))
         p = list(tqdm(pool.imap_unordered(loadFiles, files), total=len(files)))

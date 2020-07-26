@@ -1,7 +1,7 @@
 #!/opt/local/bin/python
 # test sub dtw post AES
 
-import librosa, os, json, sys, vamp
+import os, json, sys, vamp
 from samplerate import resample
 import numpy as np
 from uuid import uuid4
@@ -15,18 +15,27 @@ np.seterr(divide='ignore', invalid='ignore')   # stats division by zero warning
 
 
 SR = 22050
-DTWFRAMESIZE = 512
-SEGMENT_LENGTH = 15  # length for wp segments in linear regression 
+DTWFRAMESIZE = 512  # unused
+
+# 1st test 1990
+#SEGMENT_LENGTH = 15  # length for wp segments in linear regression 
+#LINREGRESS_MIN = 0.96
+#LINREGRESS_MAX = 1.04
+#LINREGRESS2_MIN = 0.9
+#LINREGRESS2_MAX = 1.1
+#R2_1 = 0.95
+#R2_2 = 0.9
+
+# 2nd test 1990
+SEGMENT_LENGTH = 20  # length for wp segments in linear regression 
 LINREGRESS_MIN = 0.96
 LINREGRESS_MAX = 1.04
-
 LINREGRESS2_MIN = 0.9
 LINREGRESS2_MAX = 1.1
-
-
-
 R2_1 = 0.95
-R2_2 = 0.9
+R2_2 = 0.95
+
+
 MIN_TRUE = 2
 
 MATCH_INCREMENT = 0.02
@@ -52,15 +61,6 @@ DST = 'results'
     
 class gl():
     dstdir = None
-
-
-def libDtw(X, Y, tuning_diff=0):
-    #sigma = np.array([[1, 1], [1, 2], [2, 1]])
-    D, wp = librosa.sequence.dtw(X, Y, subseq=True, global_constraints=True)
-    wp = processPath(wp, tuning_diff)
-    #with open("warping_path.txt", "w") as text_file:
-    #    for w in wp: text_file.write(str(w) + '\n')
-    return wp
 
 
 def match(X, Y, tuning=440, tuning_diff=0):
