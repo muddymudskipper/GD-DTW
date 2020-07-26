@@ -70,7 +70,7 @@ def loadRecordings():
         print('loading files for', d.split('/')[-1])
         files = [os.path.join(d, f) for f in os.listdir(d) if f.lower().endswith(('flac', 'mp3', 'shn'))]
         pool = mp.Pool(nThreads(files, THREADS_LOADING))
-        p = list(tqdm(pool.imap(loadFiles, files), total=len(files)))
+        p = list(tqdm(pool.imap_unordered(loadFiles, files), total=len(files)))
         pool.close()
         pool.join()
         p = list(filter(lambda x: x != None, p)) # remove None type for unloadable files

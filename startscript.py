@@ -42,6 +42,7 @@ def checkEtreeNumbers(folders):
 
 
 def etreeNumber(e):
+    e = e.split('/')[-1]
     for j in e.split('.'):
         try: return int(j)
         except: pass
