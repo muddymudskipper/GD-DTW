@@ -98,7 +98,7 @@ def adjust_sizes(nodes, attribute="in_degree", scale=None, in_degrees=None):
 
 #def layout(graph_file='./90-03-24.dot', out_gexf='./new_graph.gexf', layout=True, save_pdf=True, save_gephi=False, in_degrees=None):
 def layout(graph_file=None, layout=True, save_pdf=True, save_gephi=False, in_degrees=None):
-    print "loading graph"
+    print("loading graph")
     # tips:
     #   http://wiki.gephi.org/index.php/Toolkit_portal
     #   it helps to open the jar to see what's in it.
@@ -143,10 +143,10 @@ def layout(graph_file=None, layout=True, save_pdf=True, save_gephi=False, in_deg
 
         force_atlas.initAlgo()
         steps = STEPS
-        print "running force atlas for %d steps" % steps
+        print("running force atlas for %d steps" % steps)
         while steps and force_atlas.canAlgo() and not force_atlas.isConverged():
             if steps % 5000 == 0:
-                print "step %d" % steps
+                print("step %d" % steps)
             force_atlas.goAlgo()
             steps -= 1
 
@@ -162,10 +162,10 @@ def layout(graph_file=None, layout=True, save_pdf=True, save_gephi=False, in_deg
         
         label_adjust.initAlgo()
         steps = 50000
-        print "running label adjust for %d steps" % steps
+        print("running label adjust for %d steps" % steps)
         while steps and label_adjust.canAlgo() and not label_adjust.isConverged():
             if steps % 5000 == 0:
-                print "step %d" % steps
+                print("step %d" % steps)
             label_adjust.goAlgo()
             steps -= 1
         
@@ -177,11 +177,13 @@ def layout(graph_file=None, layout=True, save_pdf=True, save_gephi=False, in_deg
     #adjust_sizes(nodes, in_degrees=in_degrees)
 
     # adjust the look a bit for the pdf
-    if not in_degrees:
-        for node in nodes:
+    #if not in_degrees:
+    #    for node in nodes:
             #node_data = node.getNodeData()
             #node_data.setSize(10)
-            node.setSize(8)
+
+    for node in nodes:
+        node.setSize(8)
     
 
     preview = PreviewController.getModel()
@@ -217,7 +219,7 @@ def layout(graph_file=None, layout=True, save_pdf=True, save_gephi=False, in_deg
     
 
 def inDegrees(dot):
-    # TODO: replace with gephi function get n degrees
+    # TODO: use node.getInDegree instead
     with open(dot) as f:
         lines = f.readlines()
     in_degrees = {}

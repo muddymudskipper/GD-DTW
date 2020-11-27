@@ -16,7 +16,6 @@ try:
 except:
     START = 0
 
-
 #if sys.argv[2] == 0: START = 0
 #else: START = dates.index(sys.argv[2])     # start with this date
 
@@ -26,7 +25,7 @@ except: END = False
 
 
 
-tmpl = 'python align_match.py {0}'
+tmpl = 'python3.8 align_match.py {0}'
 
 
 def checkEtreeNumbers(folders):
@@ -58,7 +57,9 @@ def main():
         pdates = dates[START:END]
     else:
         pdates = dates[START:]
-    
+
+    Popen('ulimit -n 30000', shell=True).communicate()
+
     for d in pdates:    
         if len(date_dict[d]) < 2:
             print('SKIPPING: NOT ENOUGH RECORDINGS')
@@ -68,8 +69,10 @@ def main():
             continue
 
         cmd = tmpl.format(d)
-        print(cmd)
+        print(d)
+        
         Popen(cmd, shell=True).communicate()
+        Popen('purge', shell=True).communicate()
 
         makeDotStart(d)
 

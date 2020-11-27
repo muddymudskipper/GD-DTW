@@ -59,11 +59,18 @@ def loadRecordings():
     
     print('loading audio files')
     folders = dateDict()[DATE]
-
+    # TESTING: ONLY 2 RECORDINGS
+    #print(folders)
+    #sys.exit()
+    #folders = [folders[1], folders[2]]
     recordings = []
     for d in folders:
         print(d.split('/')[-1])
         files = [os.path.join(d, f) for f in os.listdir(d) if f.lower().endswith(('flac', 'mp3', 'shn'))]
+        #print(files)
+        #filternames = ('gd1990-03-14d2t01.flac', 'gd1990-03-14s2t01.flac')#, 'GD90-03-14d2t04.flac', 'gd1990-03-14s2t03.flac')
+        #files = list(filter(lambda x: x.endswith(filternames) , files))
+
         pool = mp.Pool(nThreads(files, THREADS_LOADING))
         p = list(tqdm(pool.imap_unordered(loadFiles, files), total=len(files)))
         pool.close()
@@ -74,6 +81,10 @@ def loadRecordings():
     recordings = sorted(recordings, key=lambda x: combinedLength(x))
     # shared memory for each audio file
     #pickle.dump(recordings, open('recordings.pickle', 'wb'))
+
+    #[print(r[0][0]) for r in recordings]
+    #sys.exit()
+
     
     for i, rec in enumerate(recordings):
         etree_number = etreeNumber(rec[0][0])

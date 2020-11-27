@@ -7,7 +7,7 @@ import numpy as np
 from uuid import uuid4
 import matplotlib.pyplot as plt
 from scipy import stats
-from math import ceil
+from math import ceil, floor
 from multiprocessing import shared_memory
 
 
@@ -27,15 +27,15 @@ DTWFRAMESIZE = 512  # unused
 #R2_2 = 0.9
 
 # 2nd test 1990
-SEGMENT_LENGTH = 20  # length for wp segments in linear regression 
+
+
+SEGMENT_LENGTH = 15  # length for wp segments in linear regression 
 LINREGRESS_MIN = 0.96
 LINREGRESS_MAX = 1.04
 LINREGRESS2_MIN = 0.9
 LINREGRESS2_MAX = 1.1
 R2_1 = 0.95
 R2_2 = 0.9
-
-
 MIN_TRUE = 2
 
 MATCH_INCREMENT = 0.02
@@ -80,9 +80,10 @@ def match(X, Y, tuning=440, tuning_diff=0):
 
     
 def makeTwoChannels(a, b):
+   #rint(len(a), len(b))
     if len(a) > len(b):
         pad = np.pad(b, [0,len(a)-len(b)])
-        return np.array([a, pad]), False
+        return np.array([a, pad]), False        
     elif len(b) > len(a):
         pad = np.pad(a, [0,len(b)-len(a)])
         return np.array([b, pad]), True
@@ -110,7 +111,7 @@ def removeNonlinear(wp):
     wp_plot = []
     for chunk in chunks:
         slope, intercept, r_value = stats.linregress(chunk)[:3]
-        if r_value**2 >= R2_1 and LINREGRESS_MAX > round(slope, 2) > LINREGRESS_MIN:
+        if r_value**2 >= R2_1 and LINREGRESS_MAX > normal_round(slope, 2) > LINREGRESS_MIN:
             wp_plot.append(chunk)
     if len(wp_plot) < MIN_TRUE: 
         wp_plot = []  # testing: omit if only one chunk is aligned to avoid false positives
@@ -119,7 +120,7 @@ def removeNonlinear(wp):
         for d in wp_plot[1:]: 
             w_combine = np.concatenate((w_combine, d), axis=0)
         slope, intercept, r_value = stats.linregress(w_combine)[:3]
-        if not (r_value**2 > R2_2 and LINREGRESS2_MAX > round(slope, 2) > LINREGRESS2_MIN):         # check slope for all pieces
+        if not (r_value**2 >= R2_2 and LINREGRESS2_MAX > normal_round(slope, 2) > LINREGRESS2_MIN):         # check slope for all pieces
             wp_plot = []
     return wp_plot, wp
 
@@ -140,8 +141,15 @@ def _removeNonlinear(wp):   # testing
 
 
 def scaleDtw(wp, tuning_diff):
-    wp[:, 0] *= 2**(tuning_diff / 1200)
+    wp[:, 1] *= 2**(tuning_diff / 1200)  
     return wp
+
+
+def normal_round(n, d):     # round() does "Banker's rounding"
+    n *= 10**d
+    if n - floor(n) < 0.5:
+        return floor(n) / 10**d
+    return ceil(n) / 10**d
 
 
 def resampleAudio(a, tuning_diff=0):
@@ -212,6 +220,18 @@ def etreeNumber(e):
 
 
 def matchStart(FILE1, FILE2, TUNING, DATE, TUNING_DIFF):
+# def matchStart(FILE1, FILE2, TUNING, DATE, TUNING_DIFF, parameters=None):
+    '''
+    if parameters:
+        SEGMENT_LENGTH = parameters['segment_length'], 
+        LINREGRESS_MIN = parameters['linregress_min'],
+        LINREGRESS_MAX = parameters['linregress_max'],
+        LINREGRESS2_MIN = parameters['linregress2_min'],
+        LINREGRESS2_MAX = parameters['linregress2_max'],
+        R2_1 = parameters['R2_1'],
+        R2_2 = parameters['R2_2']
+    '''
+
     filename1 = FILE1[0]
     filename2 = FILE2[0]
     
